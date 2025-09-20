@@ -127,14 +127,16 @@ export const CheckoutForm = ({ cart, onBackToMenu, restaurantData, showToast }) 
             const pixCode = restaurantData.customizations['Código PIX'];
             if (pixCode) {
                 messageParts.push(`*Chave PIX:* ${pixCode}`);
-                messageParts.push(`\n_(Por favor, envie o comprovante após o pagamento)_`);
+                messageParts.push(`_(Por favor, envie o comprovante após o pagamento)_`);
             }
         }
 
         if (orderData.deliveryType === 'delivery') {
+            messageParts.push(``);
             messageParts.push(`*📍 Endereço de Entrega:*`);
             messageParts.push(`${orderData.address}`);
         } else {
+            messageParts.push(``);
             messageParts.push(`*🛍️ Retirada:*`);
             messageParts.push(`No local`);
         }
