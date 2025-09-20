@@ -81,6 +81,8 @@ export const CheckoutForm = ({ cart, onBackToMenu, restaurantData, showToast }) 
         }
     };
 
+    const paymentMethodMap = { credit: 'Cartão de Crédito', debit: 'Cartão de Débito', pix: 'PIX', cash: 'Dinheiro' };
+
     // NOTA: Para que os emojis funcionem, este ficheiro DEVE ser guardado com a codificação UTF-8.
     const generateWhatsAppMessage = (orderData, cart, deliveryFee, finalTotal, formatCurrency) => {
         const messageParts = [];
