@@ -1,0 +1,139 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Define variáveis CSS para as cores dinâmicas */
+:root {
+  --primary-color: #333333; /* Cor padrão de fallback */
+  --primary-hover-color: #555555; /* Cor de hover de fallback */
+}
+
+/* Classes utilitárias que usam as variáveis CSS */
+.bg-primary { background-color: var(--primary-color); }
+.text-primary { color: var(--primary-color); }
+.border-primary { border-color: var(--primary-color); }
+.hover\:bg-primary-hover:hover { background-color: var(--primary-hover-color); }
+.ring-primary { --tw-ring-color: var(--primary-color); }
+
+/* Animações */
+@keyframes slideDown {
+  from { transform: translateY(-100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+.animate-slideDown {
+  animation: slideDown 0.5s ease-out forwards;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.animate-fadeIn {
+  animation: fadeIn 0.5s ease-in-out forwards;
+}
+
+/* Estilos do Carrossel */
+.carousel-image {
+  transition: opacity 1s ease-in-out;
+}
+
+/* Utilitário para sombra no texto */
+.text-shadow {
+  text-shadow: 0px 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+/* Utilitário para esconder a barra de rolagem */
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.hide-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+/* Animações para a Modal */
+@keyframes modal-fade-in {
+  from { background-color: rgba(0, 0, 0, 0); }
+  to { background-color: rgba(0, 0, 0, 0.5); }
+}
+.animate-modal-fade-in {
+  animation: modal-fade-in 0.3s ease-out forwards;
+}
+
+@keyframes modal-slide-up {
+  from { transform: translateY(50px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+.animate-modal-slide-up {
+  animation: modal-slide-up 0.3s ease-out forwards;
+}
+
+@keyframes slideInUp {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.animate-slideInUp {
+  animation: slideInUp 0.3s ease-out forwards;
+}
+
+/* Sombra para o topo do rodapé fixo */
+.shadow-top {
+  box-shadow: 0 -4px 6px -1px rgb(0 0 0 / 0.05), 0 -2px 4px -2px rgb(0 0 0 / 0.05);
+}
+
+/* Animação de Fade Out */
+@keyframes fadeOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+/* Animação para a modal descer (mobile) */
+@keyframes slideOutDown {
+  from { transform: translateY(0); }
+  to { transform: translateY(100%); }
+}
+
+.animate-fadeOut {
+  animation: fadeOut 0.3s ease-out forwards;
+}
+
+.animate-slideOutDown {
+  animation: slideOutDown 0.3s ease-out forwards;
+}
+
+/* Animação para o Toast entrar */
+@keyframes toastIn {
+  from {
+    transform: translateY(-20px) scale(0.9);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+/* Animação para o Toast sair */
+@keyframes toastOut {
+  from {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(-20px) scale(0.9);
+    opacity: 0;
+  }
+}
+
+.animate-toastIn {
+  animation: toastIn 0.3s ease-out forwards;
+}
+
+.animate-toastOut {
+  animation: toastOut 0.3s ease-out forwards;
+}
