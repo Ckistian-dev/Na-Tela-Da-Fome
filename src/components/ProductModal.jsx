@@ -13,9 +13,9 @@ const formatCurrency = (value) => {
 };
 
 const OptionItem = ({ option, quantity, onAdd, onRemove, isDisabled }) => (
-    <div className="flex items-center gap-3 py-2.5">
-        <img src={option['URL Imagem']} alt={option.Nome} className="w-14 h-14 object-cover rounded-md flex-shrink-0" onError={(e) => { e.target.onerror = null; e.target.src=`https://placehold.co/56x56/e2e8f0/adb5bd?text=Img` }} />
-        <div className="flex-1"><p className="font-semibold text-gray-800 text-sm">{option.Nome}</p>{parseCurrency(option.Preço) > 0 && (<p className="text-xs text-green-700 font-bold">{formatCurrency(parseCurrency(option.Preço))}</p>)}</div>
+    <div className="flex items-center gap-3 py-2">
+        <img src={option['URL Imagem']} alt={option.Nome} className="w-12 h-12 object-cover rounded-md flex-shrink-0" onError={(e) => { e.target.onerror = null; e.target.src=`https://placehold.co/56x56/e2e8f0/adb5bd?text=Img` }} />
+        <div className="flex-1"><p className="font-semibold text-gray-800 text-sm">{option.Nome}</p>{parseCurrency(option.Preço) > 0 && (<p className="text-xs text-primary font-bold">{formatCurrency(parseCurrency(option.Preço))}</p>)}</div>
         <div className="flex items-center gap-2">{quantity > 0 && (<><button onClick={onRemove} className="p-1 rounded-full bg-gray-200 text-gray-700 hover:bg-gray-300"><Minus size={16} /></button><span className="font-bold text-base w-5 text-center">{quantity}</span></>)}<button onClick={onAdd} disabled={isDisabled} className="p-1 rounded-full bg-primary text-white hover:bg-primary-hover disabled:bg-gray-300"><Plus size={16} /></button></div>
     </div>
 );

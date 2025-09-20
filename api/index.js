@@ -25,7 +25,7 @@ const auth = new google.auth.GoogleAuth({
         client_email: process.env.GOOGLE_CLIENT_EMAIL,
         private_key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'),
     },
-    scopes: ['https://www.googleapis.com/auth/spreadsheets'], // Permissão de leitura e escrita
+    scopes: ['https://www.googleapis.com/auth/spreadsheets'],
 });
 
 const sheets = google.sheets({ version: 'v4', auth });
@@ -102,11 +102,23 @@ export default async function handler(req, res) {
                 return itemStr;
             }).join(' | ');
             
+            // --- LÓGICA DE TRADUÇÃO DO MÉTODO DE PAGAMENTO ---
+            const paymentMethodMap = {
+                credit: 'Cartão de Crédito',
+                debit: 'Cartão de Débito',
+                pix: 'PIX',
+                cash: 'Dinheiro'
+            };
+            const translatedPaymentMethod = paymentMethodMap[orderData.paymentMethod] || orderData.paymentMethod;
+            // --- FIM DA LÓGICA DE TRADUÇÃO ---
+
             const newRow = [
                 orderId, formattedDate, orderData.customerName,
                 orderData.deliveryType === 'pickup' ? 'Retirada' : 'Entrega',
                 orderData.address || '', orderData.observations || '',
-                orderData.paymentMethod, '', itemsString, orderData.subtotal,
+                translatedPaymentMethod, // Usa o valor traduzido
+                '', // Troco Para
+                itemsString, orderData.subtotal,
                 orderData.deliveryFee, orderData.coupon || '', orderData.total, 'Novo',
             ];
 
@@ -125,3 +137,4 @@ export default async function handler(req, res) {
     // Se não for GET ou POST, retorna um erro
     return res.status(405).json({ error: 'Método não permitido.' });
 }
+
