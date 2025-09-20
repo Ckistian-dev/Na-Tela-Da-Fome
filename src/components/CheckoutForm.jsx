@@ -24,15 +24,15 @@ const SectionHeader = ({ icon, title }) => (
 const InputField = ({ label, ...props }) => (
     <div>
         <label className="block text-sm font-medium text-gray-600 mb-1">{label}</label>
-        <input
+        <input 
             className="w-full bg-gray-50 border-2 border-gray-200 rounded-lg py-2.5 px-4 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition"
-            {...props}
+            {...props} 
         />
     </div>
 );
 
 const OptionButton = ({ icon, label, isSelected, ...props }) => (
-    <button
+    <button 
         type="button"
         className={`w-full flex items-center justify-center gap-2 p-3 border-2 rounded-lg transition-all duration-200 text-sm ${isSelected ? 'bg-primary/10 border-primary font-bold' : 'bg-white border-gray-200 hover:border-gray-300'}`}
         {...props}
@@ -45,6 +45,11 @@ const OptionButton = ({ icon, label, isSelected, ...props }) => (
 // --- Componente Principal do Checkout ---
 
 export const CheckoutForm = ({ cart, onBackToMenu, restaurantData, showToast }) => {
+    // GUARDA DE SEGURANÇA: Se o carrinho ou os dados do restaurante não estiverem prontos, não renderiza.
+    if (!cart || !restaurantData) {
+        return null; // Evita o erro "Cannot read properties of undefined"
+    }
+    
     const [deliveryType, setDeliveryType] = useState('pickup');
     const [paymentMethod, setPaymentMethod] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -168,7 +173,8 @@ export const CheckoutForm = ({ cart, onBackToMenu, restaurantData, showToast }) 
 
             if (!response.ok) throw new Error('Falha ao salvar o pedido no servidor.');
 
-            const whatsappMessage = generateWhatsAppMessage(orderData);
+            // CORREÇÃO AQUI: Passando todos os argumentos necessários para a função.
+            const whatsappMessage = generateWhatsAppMessage(orderData, cart, deliveryFee, finalTotal, formatCurrency);
             const whatsappNumber = restaurantData.customizations.Whatsapp;
             const encodedMessage = encodeURIComponent(whatsappMessage);
             const whatsappUrl = `https://wa.me/55${whatsappNumber}?text=${encodedMessage}`;

@@ -1,19 +1,17 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
-import sheetDataRouter from './api/sheetData.js';
-import submitOrderRouter from './api/submitOrder.js'; // Importa o novo roteador
+import apiHandler from './api/index.js';
 
 const app = express();
 const PORT = 3001;
 
 app.use(cors());
+// Adiciona o middleware para processar JSON no corpo das requisições POST
 app.use(express.json());
 
-// Rota para buscar dados
-app.use('/api/sheetData', sheetDataRouter);
-// Rota para salvar pedidos
-app.use('/api/submitOrder', submitOrderRouter);
+// A "ponte" para o nosso ficheiro de API. Todas as requisições para /api serão tratadas aqui.
+app.use('/api', apiHandler);
 
 app.listen(PORT, () => {
   console.log(`Servidor da API rodando em http://localhost:${PORT}`);

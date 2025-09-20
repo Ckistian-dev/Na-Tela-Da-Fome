@@ -22,58 +22,13 @@ const parseCurrency = (value) => {
 const useCart = () => {
     const [items, setItems] = useState([]);
     const [coupon, setCoupon] = useState(null);
-
-    const addItem = (newItem) => {
-        const optionsId = newItem.options.map(opt => `${opt.ID}x${opt.quantity}`).sort().join('_');
-        const uniqueId = `${newItem.product.ID}_${optionsId}`;
-        const existingItem = items.find(item => item.uniqueId === uniqueId);
-        if (existingItem) {
-            updateItemQuantity(existingItem.cartId, existingItem.mainQuantity + newItem.mainQuantity);
-        } else {
-            setItems(prev => [...prev, { ...newItem, uniqueId, cartId: Date.now() }]);
-        }
-    };
-
-    const updateItemQuantity = (cartId, newQuantity) => {
-        setItems(prev => {
-            if (newQuantity <= 0) return prev.filter(item => item.cartId !== cartId);
-            return prev.map(item => {
-                if (item.cartId === cartId) {
-                    const basePrice = parseCurrency(item.product.Preço) - parseCurrency(item.product.Desconto);
-                    const optionsPrice = item.options.reduce((total, opt) => total + (parseCurrency(opt.Preço) * opt.quantity), 0);
-                    return { ...item, mainQuantity: newQuantity, totalPrice: (basePrice + optionsPrice) * newQuantity };
-                }
-                return item;
-            });
-        });
-    };
-
-    const applyCoupon = (couponCode, availableCoupons) => {
-        const foundCoupon = availableCoupons.find(c => c['Código'] === couponCode);
-        if (foundCoupon) {
-            setCoupon(foundCoupon);
-            return true;
-        }
-        setCoupon(null);
-        return false;
-    };
-    
+    const addItem = (newItem) => { const optionsId = newItem.options.map(opt => `${opt.ID}x${opt.quantity}`).sort().join('_'); const uniqueId = `${newItem.product.ID}_${optionsId}`; const existingItem = items.find(item => item.uniqueId === uniqueId); if (existingItem) { updateItemQuantity(existingItem.cartId, existingItem.mainQuantity + newItem.mainQuantity); } else { setItems(prev => [...prev, { ...newItem, uniqueId, cartId: Date.now() }]); } };
+    const updateItemQuantity = (cartId, newQuantity) => { setItems(prev => { if (newQuantity <= 0) return prev.filter(item => item.cartId !== cartId); return prev.map(item => { if (item.cartId === cartId) { const basePrice = parseCurrency(item.product.Preço) - parseCurrency(item.product.Desconto); const optionsPrice = item.options.reduce((total, opt) => total + (parseCurrency(opt.Preço) * opt.quantity), 0); return { ...item, mainQuantity: newQuantity, totalPrice: (basePrice + optionsPrice) * newQuantity }; } return item; }); }); };
+    const applyCoupon = (couponCode, availableCoupons) => { const foundCoupon = availableCoupons.find(c => c['Código'] === couponCode); if (foundCoupon) { setCoupon(foundCoupon); return true; } setCoupon(null); return false; };
     const subtotal = useMemo(() => items.reduce((sum, item) => sum + item.totalPrice, 0), [items]);
     const totalItems = useMemo(() => items.reduce((sum, item) => sum + item.mainQuantity, 0), [items]);
-
-    const discount = useMemo(() => {
-        if (!coupon || subtotal === 0) return 0;
-        const couponValue = parseCurrency(coupon.Valor);
-        // Se valor for entre 0 e 1 (ex: 0.1), é porcentagem
-        if (couponValue > 0 && couponValue < 1) {
-            return subtotal * couponValue;
-        }
-        // Se for 1 ou mais, é valor fixo
-        return Math.min(subtotal, couponValue);
-    }, [coupon, subtotal]);
-
+    const discount = useMemo(() => { if (!coupon || subtotal === 0) return 0; const couponValue = parseCurrency(coupon.Valor); if (couponValue > 0 && couponValue < 1) { return subtotal * couponValue; } return Math.min(subtotal, couponValue); }, [coupon, subtotal]);
     const total = useMemo(() => subtotal - discount, [subtotal, discount]);
-
     return { items, addItem, updateItemQuantity, subtotal, totalItems, applyCoupon, discount, total, coupon };
 };
 
@@ -109,23 +64,10 @@ function App() {
     loadData();
   }, []);
 
-  const categories = useMemo(() => {
-    if (!restaurantData) return [];
-    const allCategories = restaurantData.products.filter(p => p.Situação === 'Ativo').map(p => p.Categoria);
-    return ['Destaques', ...new Set(allCategories)];
-  }, [restaurantData]);
-
+  const categories = useMemo(() => { if (!restaurantData) return []; const allCategories = restaurantData.products.filter(p => p.Situação === 'Ativo').map(p => p.Categoria); return ['Destaques', ...new Set(allCategories)]; }, [restaurantData]);
   useEffect(() => { if (categories.length > 0 && !activeCategory) setActiveCategory(categories[0]); }, [categories, activeCategory]);
   const allActiveProducts = useMemo(() => restaurantData ? restaurantData.products.filter(p => p.Situação === 'Ativo') : [], [restaurantData]);
-  const displayedProducts = useMemo(() => {
-    if (searchQuery) {
-      const lowercasedQuery = searchQuery.toLowerCase();
-      return allActiveProducts.filter(p => p.Nome.toLowerCase().includes(lowercasedQuery) || p.Descrição.toLowerCase().includes(lowercasedQuery));
-    }
-    if (activeCategory === 'Destaques') return allActiveProducts;
-    if (activeCategory) return allActiveProducts.filter(p => p.Categoria === activeCategory);
-    return [];
-  }, [searchQuery, activeCategory, allActiveProducts]);
+  const displayedProducts = useMemo(() => { if (searchQuery) { const lowercasedQuery = searchQuery.toLowerCase(); return allActiveProducts.filter(p => p.Nome.toLowerCase().includes(lowercasedQuery) || p.Descrição.toLowerCase().includes(lowercasedQuery)); } if (activeCategory === 'Destaques') return allActiveProducts; if (activeCategory) return allActiveProducts.filter(p => p.Categoria === activeCategory); return []; }, [searchQuery, activeCategory, allActiveProducts]);
 
   const handleCategorySelect = (category) => { setSearchQuery(''); setActiveCategory(category); setIsSearchOpen(false); };
   const handleSearchSubmit = (term) => { setSearchQuery(term); setActiveCategory(`Resultados para "${term}"`); setIsSearchOpen(false); };
@@ -144,7 +86,8 @@ function App() {
               <div className="max-w-7xl mx-auto p-4"><div className="flex items-center gap-3 mb-6"><div className="w-1.5 h-7 bg-primary rounded-full"></div><h2 className="text-2xl font-bold text-gray-800">{activeCategory}</h2></div><ProductList products={displayedProducts} onProductSelect={(p) => setSelectedProduct(p)} /></div>
             </>
           ) : (
-            <CheckoutForm cart={cart} onBackToMenu={() => setView('menu')} restaurantData={restaurantData} showToast={showToast} />
+            // GUARDA REFORÇADA: Só renderiza o checkout se os dados estiverem prontos.
+            !loading && restaurantData && <CheckoutForm cart={cart} onBackToMenu={() => setView('menu')} restaurantData={restaurantData} showToast={showToast} />
           )}
         </main>
       </div>
