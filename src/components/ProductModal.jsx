@@ -107,7 +107,7 @@ export const ProductModal = ({ isOpen, onClose, product, addOns, onAddToCart }) 
 
     return (
         <div onClick={onClose} className="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4 animate-fadeIn">
-            <div onClick={(e) => e.stopPropagation()} className="bg-gray-50 w-full max-w-2xl max-h-[95vh] rounded-xl shadow-xl flex flex-col">
+            <div onClick={(e) => e.stopPropagation()} className="bg-gray-50 w-full max-w-2xl max-h-[80vh] rounded-xl shadow-xl flex flex-col">
                 <div className="flex-1 overflow-y-auto">
                     <div className="p-4 md:p-6 bg-white rounded-t-xl sticky top-0 z-10 border-b">
                         <div className="flex gap-4">
