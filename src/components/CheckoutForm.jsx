@@ -76,46 +76,59 @@ export const CheckoutForm = ({ cart, onBackToMenu, restaurantData, showToast }) 
         }
     };
     
-    // --- MENSAGEM DE WHATSAPP REESCRITA NO PADRÃO QUE FUNCIONA PARA SI ---
+    // NOTA: Para que os emojis funcionem, este ficheiro DEVE ser guardado com a codificação UTF-8.
     const generateWhatsAppMessage = (orderData) => {
-        // NOTA: Para que os emojis funcionem, este ficheiro DEVE ser guardado com a codificação UTF-8.
-        let message = "Olá, gostaria de fazer um novo pedido! 🛵\n\n";
-        message += `👤 *Cliente:*\n${orderData.customerName}\n\n`;
+        const messageParts = [];
         
-        message += `📋 *Meu Pedido:*\n`;
+        messageParts.push(`Olá, gostaria de fazer um novo pedido! 🛵`);
+        messageParts.push(``);
+        messageParts.push(`*👤 Cliente:*`);
+        messageParts.push(orderData.customerName);
+        messageParts.push(``);
+        messageParts.push(`*📋 Meu Pedido:*`);
         orderData.cart.forEach(item => {
-            message += `• ${item.mainQuantity}x *${item.product.Nome}*\n`;
+            messageParts.push(`• ${item.mainQuantity}x *${item.product.Nome}*`);
             if (item.options.length > 0) {
                 item.options.forEach(opt => {
-                    message += `  - ${opt.quantity}x ${opt.Nome}\n`;
+                    messageParts.push(`  - ${opt.quantity}x ${opt.Nome}`);
                 });
             }
         });
 
         if (orderData.observations) {
-            message += `\n✏️ *Observações:*\n${orderData.observations}\n`;
+            messageParts.push(``);
+            messageParts.push(`*✏️ Observações:*`);
+            messageParts.push(orderData.observations);
         }
         
-        message += `\n-----------------------------------\n\n`;
-        message += `💰 *Resumo Financeiro:*\n`;
-        message += `Subtotal: ${formatCurrency(cart.subtotal)}\n`;
+        messageParts.push(``);
+        messageParts.push(`-----------------------------------`);
+        messageParts.push(``);
+        messageParts.push(`*💰 Resumo Financeiro:*`);
+        messageParts.push(`Subtotal: ${formatCurrency(cart.subtotal)}`);
         if (cart.discount > 0) {
-            message += `Desconto (${cart.coupon['Código']}): -${formatCurrency(cart.discount)}\n`;
+            messageParts.push(`Desconto (${cart.coupon['Código']}): -${formatCurrency(cart.discount)}`);
         }
-        message += `Taxa de Entrega: ${formatCurrency(deliveryFee)}\n`;
-        message += `*Total: ${formatCurrency(finalTotal)}*\n\n`;
+        messageParts.push(`Taxa de Entrega: ${formatCurrency(deliveryFee)}`);
+        messageParts.push(`*Total: ${formatCurrency(finalTotal)}*`);
+        messageParts.push(``);
         
-        message += `💳 *Forma de Pagamento:*\n${orderData.paymentMethod}\n\n`;
+        messageParts.push(`*💳 Forma de Pagamento:*`);
+        messageParts.push(orderData.paymentMethod);
+        messageParts.push(``);
 
         if (orderData.deliveryType === 'delivery') {
-            message += `📍 *Endereço para Entrega:*\n${orderData.address}\n`;
+            messageParts.push(`*📍 Endereço para Entrega:*`);
+            messageParts.push(orderData.address);
         } else {
-            message += `🛍️ *Tipo de Entrega:*\nRetirar no local\n`;
+            messageParts.push(`*🛍️ Tipo de Entrega:*`);
+            messageParts.push(`Retirar no local`);
         }
 
-        message += `\nAguardando confirmação! Obrigado! 😊`;
-        
-        return message;
+        messageParts.push(``);
+        messageParts.push(`Aguardando confirmação! Obrigado! 😊`);
+
+        return messageParts.join('\n');
     };
 
 
@@ -144,7 +157,8 @@ export const CheckoutForm = ({ cart, onBackToMenu, restaurantData, showToast }) 
         
         try {
             const slug = window.location.pathname.replace('/', '') || 'ruachdelivery';
-            const response = await fetch('/api/submitOrder', {
+            // Aponta para a API centralizada
+            const response = await fetch('/api', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ orderData, slug })
