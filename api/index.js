@@ -25,7 +25,7 @@ const auth = new google.auth.GoogleAuth({
         client_email: process.env.GOOGLE_CLIENT_EMAIL,
         private_key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'),
     },
-    scopes: ['https://www.googleapis.com/auth/spreadsheets'], // Permissão de leitura e escrita
+    scopes: ['https://www.googleapis.com/auth/spreadsheets'],
 });
 
 const sheets = google.sheets({ version: 'v4', auth });
@@ -33,44 +33,26 @@ const sheets = google.sheets({ version: 'v4', auth });
 // A função principal que a Vercel irá executar
 export default async function handler(req, res) {
     
-    // --- LÓGICA PARA BUSCAR DADOS (MÉTODO GET) ---
     if (req.method === 'GET') {
         const { slug } = req.query;
         if (!slug) return res.status(400).json({ error: 'Slug da empresa é obrigatório.' });
 
         try {
             const masterSheet = await sheets.spreadsheets.values.get({
-                spreadsheetId: process.env.MASTER_SHEET_ID,
-                range: 'Página1',
+                spreadsheetId: process.env.MASTER_SHEET_ID, range: 'Página1',
             });
             const companies = rowsToObjects(masterSheet.data.values);
             const companyInfo = companies.find(c => c['URL Empresa'] === slug);
-            if (!companyInfo || !companyInfo['Link Planilha']) {
-                return res.status(404).json({ error: `Empresa '${slug}' não encontrada.` });
-            }
+            if (!companyInfo || !companyInfo['Link Planilha']) return res.status(404).json({ error: `Empresa '${slug}' não encontrada.` });
             const restaurantSheetId = companyInfo['Link Planilha'];
 
             const ranges = ['Produtos', 'Acompanhamentos', 'Cupons', 'Customizações'];
-            const response = await sheets.spreadsheets.values.batchGet({
-                spreadsheetId: restaurantSheetId,
-                ranges: ranges,
-            });
-            
+            const response = await sheets.spreadsheets.values.batchGet({ spreadsheetId: restaurantSheetId, ranges });
             const [productsRows, addOnsRows, couponsRows, customizationsRows] = response.data.valueRanges.map(r => r.values);
 
-            const customizationsObject = (customizationsRows || [])
-                .filter((row, index) => index > 0 && row && row[0])
-                .reduce((obj, row) => {
-                    obj[row[0]] = row[1] || '';
-                    return obj;
-                }, {});
+            const customizationsObject = (customizationsRows || []).filter((row, index) => index > 0 && row && row[0]).reduce((obj, row) => { obj[row[0]] = row[1] || ''; return obj; }, {});
 
-            const data = {
-                products: rowsToObjects(productsRows),
-                addOns: rowsToObjects(addOnsRows),
-                coupons: rowsToObjects(couponsRows),
-                customizations: customizationsObject,
-            };
+            const data = { products: rowsToObjects(productsRows), addOns: rowsToObjects(addOnsRows), coupons: rowsToObjects(couponsRows), customizations: customizationsObject };
             return res.status(200).json(data);
         } catch (error) {
             console.error('GET Error:', error);
@@ -78,15 +60,12 @@ export default async function handler(req, res) {
         }
     }
 
-    // --- LÓGICA PARA SALVAR PEDIDOS (MÉTODO POST) ---
     if (req.method === 'POST') {
         const { orderData, slug } = req.body;
         if (!orderData || !slug) return res.status(400).json({ error: 'Dados do pedido ou slug faltando.' });
         
         try {
-            const masterSheet = await sheets.spreadsheets.values.get({
-                spreadsheetId: process.env.MASTER_SHEET_ID, range: 'Página1',
-            });
+            const masterSheet = await sheets.spreadsheets.values.get({ spreadsheetId: process.env.MASTER_SHEET_ID, range: 'Página1' });
             const companies = rowsToObjects(masterSheet.data.values);
             const companyInfo = companies.find(c => c['URL Empresa'] === slug);
             if (!companyInfo || !companyInfo['Link Planilha']) return res.status(404).json({ error: `Empresa '${slug}' não encontrada.` });
@@ -102,23 +81,14 @@ export default async function handler(req, res) {
                 return itemStr;
             }).join(' | ');
             
-            // --- CORREÇÃO AQUI: Adicionado o 'dicionário' que estava em falta ---
-            const paymentMethodMap = {
-                credit: 'Cartão de Crédito',
-                debit: 'Cartão de Débito',
-                pix: 'PIX',
-                cash: 'Dinheiro'
-            };
+            const paymentMethodMap = { credit: 'Cartão de Crédito', debit: 'Cartão de Débito', pix: 'PIX', cash: 'Dinheiro' };
             const translatedPaymentMethod = paymentMethodMap[orderData.paymentMethod] || orderData.paymentMethod;
-            // --- FIM DA CORREÇÃO ---
 
             const newRow = [
                 orderId, formattedDate, orderData.customerName,
                 orderData.deliveryType === 'pickup' ? 'Retirada' : 'Entrega',
                 orderData.address || '', orderData.observations || '',
-                translatedPaymentMethod, // Usa o valor traduzido
-                '', // Troco Para
-                itemsString, orderData.subtotal,
+                translatedPaymentMethod, '', itemsString, orderData.subtotal,
                 orderData.deliveryFee, orderData.coupon || '', orderData.total, 'Novo',
             ];
 
@@ -134,7 +104,5 @@ export default async function handler(req, res) {
         }
     }
     
-    // Se não for GET ou POST, retorna um erro
     return res.status(405).json({ error: 'Método não permitido.' });
 }
-
