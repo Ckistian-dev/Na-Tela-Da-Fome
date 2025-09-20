@@ -39,7 +39,7 @@ export default async function handler(req, res) {
 
         try {
             const masterSheet = await sheets.spreadsheets.values.get({
-                spreadsheetId: process.env.MASTER_SHEET_ID, range: 'Página1',
+                spreadsheetId: process.env.MASTER_SHEET_ID, range: 'Empresas',
             });
             const companies = rowsToObjects(masterSheet.data.values);
             const companyInfo = companies.find(c => c['URL Empresa'] === slug);
