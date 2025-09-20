@@ -24,15 +24,15 @@ const SectionHeader = ({ icon, title }) => (
 const InputField = ({ label, ...props }) => (
     <div>
         <label className="block text-sm font-medium text-gray-600 mb-1">{label}</label>
-        <input 
+        <input
             className="w-full bg-gray-50 border-2 border-gray-200 rounded-lg py-2.5 px-4 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition"
-            {...props} 
+            {...props}
         />
     </div>
 );
 
 const OptionButton = ({ icon, label, isSelected, ...props }) => (
-    <button 
+    <button
         type="button"
         className={`w-full flex items-center justify-center gap-2 p-3 border-2 rounded-lg transition-all duration-200 text-sm ${isSelected ? 'bg-primary/10 border-primary font-bold' : 'bg-white border-gray-200 hover:border-gray-300'}`}
         {...props}
@@ -75,22 +75,22 @@ export const CheckoutForm = ({ cart, onBackToMenu, restaurantData, showToast }) 
             });
         }
     };
-    
+
     // NOTA: Para que os emojis funcionem, este ficheiro DEVE ser guardado com a codificação UTF-8.
-    const generateWhatsAppMessage = (orderData) => {
+    const generateWhatsAppMessage = (orderData, cart, deliveryFee, finalTotal, formatCurrency) => {
         const messageParts = [];
-        
-        messageParts.push(`Olá, gostaria de fazer um novo pedido! 🛵`);
+
+        messageParts.push(`📱 *PEDIDO NA TELA DA FOME!* 😋`);
         messageParts.push(``);
-        messageParts.push(`*👤 Cliente:*`);
-        messageParts.push(orderData.customerName);
+        messageParts.push(`*👤 Cliente:* ${orderData.customerName}`);
         messageParts.push(``);
-        messageParts.push(`*📋 Meu Pedido:*`);
+
+        messageParts.push(`*🛒 Pedido:*`);
         orderData.cart.forEach(item => {
             messageParts.push(`• ${item.mainQuantity}x *${item.product.Nome}*`);
             if (item.options.length > 0) {
                 item.options.forEach(opt => {
-                    messageParts.push(`  - ${opt.quantity}x ${opt.Nome}`);
+                    messageParts.push(`   └ ${opt.quantity}x ${opt.Nome}`);
                 });
             }
         });
@@ -98,43 +98,45 @@ export const CheckoutForm = ({ cart, onBackToMenu, restaurantData, showToast }) 
         if (orderData.observations) {
             messageParts.push(``);
             messageParts.push(`*✏️ Observações:*`);
-            messageParts.push(orderData.observations);
+            messageParts.push(`_${orderData.observations}_`);
         }
-        
+
         messageParts.push(``);
-        messageParts.push(`-----------------------------------`);
-        messageParts.push(``);
-        messageParts.push(`*💰 Resumo Financeiro:*`);
+        messageParts.push(`*💰 Resumo do Pagamento:*`);
         messageParts.push(`Subtotal: ${formatCurrency(cart.subtotal)}`);
         if (cart.discount > 0) {
             messageParts.push(`Desconto (${cart.coupon['Código']}): -${formatCurrency(cart.discount)}`);
         }
-        messageParts.push(`Taxa de Entrega: ${formatCurrency(deliveryFee)}`);
-        messageParts.push(`*Total: ${formatCurrency(finalTotal)}*`);
+        if (orderData.deliveryType === 'delivery') {
+            messageParts.push(`Taxa de entrega: ${formatCurrency(deliveryFee)}`);
+        }
+        messageParts.push(`➡️ *Total: ${formatCurrency(finalTotal)}*`);
         messageParts.push(``);
-        
+
         messageParts.push(`*💳 Forma de Pagamento:*`);
-        messageParts.push(orderData.paymentMethod);
+        messageParts.push(`${orderData.paymentMethod}`);
         messageParts.push(``);
 
         if (orderData.deliveryType === 'delivery') {
-            messageParts.push(`*📍 Endereço para Entrega:*`);
-            messageParts.push(orderData.address);
+            messageParts.push(`*📍 Endereço de Entrega:*`);
+            messageParts.push(`${orderData.address}`);
         } else {
-            messageParts.push(`*🛍️ Tipo de Entrega:*`);
-            messageParts.push(`Retirar no local`);
+            messageParts.push(`*🛍️ Retirada:*`);
+            messageParts.push(`No local`);
         }
 
         messageParts.push(``);
-        messageParts.push(`Aguardando confirmação! Obrigado! 😊`);
+        messageParts.push(`✅ Pedido enviado com sucesso!`);
+        messageParts.push(`Aguarde nossa confirmação. Obrigado pela preferência! 🙏😊`);
 
         return messageParts.join('\n');
     };
 
 
+
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if(!paymentMethod){
+        if (!paymentMethod) {
             showToast('Por favor, selecione uma forma de pagamento.');
             return;
         }
@@ -154,7 +156,7 @@ export const CheckoutForm = ({ cart, onBackToMenu, restaurantData, showToast }) 
             coupon: cart.coupon?.['Código'],
             total: finalTotal
         };
-        
+
         try {
             const slug = window.location.pathname.replace('/', '') || 'ruachdelivery';
             // Aponta para a API centralizada
@@ -163,14 +165,14 @@ export const CheckoutForm = ({ cart, onBackToMenu, restaurantData, showToast }) 
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ orderData, slug })
             });
-            
+
             if (!response.ok) throw new Error('Falha ao salvar o pedido no servidor.');
 
             const whatsappMessage = generateWhatsAppMessage(orderData);
             const whatsappNumber = restaurantData.customizations.Whatsapp;
             const encodedMessage = encodeURIComponent(whatsappMessage);
             const whatsappUrl = `https://wa.me/55${whatsappNumber}?text=${encodedMessage}`;
-            
+
             window.location.href = whatsappUrl;
 
         } catch (error) {
@@ -194,7 +196,7 @@ export const CheckoutForm = ({ cart, onBackToMenu, restaurantData, showToast }) 
 
             <div className="max-w-7xl mx-auto p-2 sm:p-4">
                 <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-8 items-start">
-                    
+
                     <div className="lg:col-span-2 space-y-4">
                         <div className="bg-white p-4 rounded-lg shadow-sm"><SectionHeader icon={<User />} title="Seus Dados" /><InputField label="Seu nome" name="customerName" placeholder="Digite seu nome completo" required /></div>
                         <div className="bg-white p-4 rounded-lg shadow-sm"><SectionHeader icon={<Truck />} title="Entrega" /><div className="grid grid-cols-2 gap-3 mb-4"><OptionButton icon={<ShoppingBag size={18} />} label="Retirar" isSelected={deliveryType === 'pickup'} onClick={() => setDeliveryType('pickup')} /><OptionButton icon={<Truck size={18} />} label="Delivery" isSelected={deliveryType === 'delivery'} onClick={() => setDeliveryType('delivery')} /></div>{deliveryType === 'delivery' && (<div className="animate-fadeIn"><InputField label="Endereço de entrega" name="address" placeholder="Rua, Número, Bairro" required /></div>)}</div>
