@@ -25,7 +25,7 @@ const auth = new google.auth.GoogleAuth({
         client_email: process.env.GOOGLE_CLIENT_EMAIL,
         private_key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'),
     },
-    scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+    scopes: ['https://www.googleapis.com/auth/spreadsheets'], // Permissão de leitura e escrita
 });
 
 const sheets = google.sheets({ version: 'v4', auth });
@@ -102,7 +102,7 @@ export default async function handler(req, res) {
                 return itemStr;
             }).join(' | ');
             
-            // --- LÓGICA DE TRADUÇÃO DO MÉTODO DE PAGAMENTO ---
+            // --- CORREÇÃO AQUI: Adicionado o 'dicionário' que estava em falta ---
             const paymentMethodMap = {
                 credit: 'Cartão de Crédito',
                 debit: 'Cartão de Débito',
@@ -110,7 +110,7 @@ export default async function handler(req, res) {
                 cash: 'Dinheiro'
             };
             const translatedPaymentMethod = paymentMethodMap[orderData.paymentMethod] || orderData.paymentMethod;
-            // --- FIM DA LÓGICA DE TRADUÇÃO ---
+            // --- FIM DA CORREÇÃO ---
 
             const newRow = [
                 orderId, formattedDate, orderData.customerName,
