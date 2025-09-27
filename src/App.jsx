@@ -10,7 +10,7 @@ import { CartBar } from './components/CartBar';
 import { CartModal } from './components/CartModal';
 import { CheckoutForm } from './components/CheckoutForm';
 import { Toast } from './components/Toast';
-import { Footer } from './components/Footer'; // Importa o novo componente
+import { Footer } from './components/Footer';
 
 const parseCurrency = (value) => {
     if (typeof value === 'number') return value;
@@ -64,31 +64,24 @@ function App() {
     loadData();
   }, []);
 
-  const categories = useMemo(() => {
-    if (!restaurantData) return [];
-    const allCategories = restaurantData.products.filter(p => p.Situação === 'Ativo').map(p => p.Categoria);
-    return [...new Set(allCategories)];
-  }, [restaurantData]);
-
-  useEffect(() => { if (categories.length > 0 && !activeCategory) setActiveCategory(categories[0]); }, [categories, activeCategory]);
+  const categories = useMemo(() => { if (!restaurantData) return []; const allCategories = restaurantData.products.filter(p => p.Situação === 'Ativo').map(p => p.Categoria); return [...new Set(allCategories)]; }, [restaurantData]);
   const allActiveProducts = useMemo(() => restaurantData ? restaurantData.products.filter(p => p.Situação === 'Ativo') : [], [restaurantData]);
   const displayedProducts = useMemo(() => { if (searchQuery) { const lowercasedQuery = searchQuery.toLowerCase(); return allActiveProducts.filter(p => p.Nome.toLowerCase().includes(lowercasedQuery) || p.Descrição.toLowerCase().includes(lowercasedQuery)); } if (activeCategory) return allActiveProducts.filter(product => product.Categoria === activeCategory); return []; }, [searchQuery, activeCategory, allActiveProducts]);
 
+  // --- LÓGICA CORRIGIDA AQUI ---
   const handleCategorySelect = (category) => {
     setSearchQuery('');
+    // Se a categoria clicada já for a ativa, deseleciona (volta a null). Senão, seleciona a nova.
     setActiveCategory(prevActive => prevActive === category ? null : category);
     setIsSearchOpen(false);
   };
+  // --- FIM DA CORREÇÃO ---
 
   const handleSearchSubmit = (term) => { setSearchQuery(term); setActiveCategory(null); setIsSearchOpen(false); };
   
   const renderContent = () => {
-    if (searchQuery) {
-      return (<div className="max-w-7xl mx-auto p-4"><div className="flex items-center gap-3 mb-6"><div className="w-1.5 h-7 bg-primary rounded-full"></div><h2 className="text-2xl font-bold text-gray-800">Resultados para "{searchQuery}"</h2></div><ProductList products={displayedProducts} onProductSelect={(p) => setSelectedProduct(p)} /></div>);
-    }
-    if (activeCategory) {
-      return (<div className="max-w-7xl mx-auto p-4"><div className="flex items-center gap-3 mb-6"><div className="w-1.5 h-7 bg-primary rounded-full"></div><h2 className="text-2xl font-bold text-gray-800">{activeCategory}</h2></div><ProductList products={displayedProducts} onProductSelect={(p) => setSelectedProduct(p)} /></div>);
-    }
+    if (searchQuery) { return (<div className="max-w-7xl mx-auto p-4"><div className="flex items-center gap-3 mb-6"><div className="w-1.5 h-7 bg-primary rounded-full"></div><h2 className="text-2xl font-bold text-gray-800">Resultados para "{searchQuery}"</h2></div><ProductList products={displayedProducts} onProductSelect={(p) => setSelectedProduct(p)} /></div>); }
+    if (activeCategory) { return (<div className="max-w-7xl mx-auto p-4"><div className="flex items-center gap-3 mb-6"><div className="w-1.5 h-7 bg-primary rounded-full"></div><h2 className="text-2xl font-bold text-gray-800">{activeCategory}</h2></div><ProductList products={displayedProducts} onProductSelect={(p) => setSelectedProduct(p)} /></div>); }
     return (
       <div className="max-w-7xl mx-auto p-4 space-y-10">
         {categories.map(category => {
@@ -125,10 +118,8 @@ function App() {
             </main>
           </div>
         </div>
-        
         <Footer restaurantName={restaurantData?.customizations?.Nome || 'Cardápio Digital'} />
       </div>
-
       <SearchModal isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} categories={categories} onCategorySelect={handleCategorySelect} onSearchSubmit={handleSearchSubmit} />
       <ProductModal isOpen={!!selectedProduct} onClose={() => setSelectedProduct(null)} product={selectedProduct} addOns={restaurantData?.addOns} onAddToCart={cart.addItem} />
       {view === 'menu' && <CartBar totalItems={cart.totalItems} totalPrice={cart.total} onOpenCart={() => setIsCartOpen(true)} />}
