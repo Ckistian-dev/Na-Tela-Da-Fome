@@ -204,7 +204,7 @@ export const CheckoutForm = ({ cart, onBackToMenu, restaurantData, showToast }) 
         <div className="animate-fadeIn">
             <div className="sticky top-0 z-20 bg-white/80 backdrop-blur-md shadow-sm">
                 <div className="max-w-7xl mx-auto px-4">
-                    <div className="flex items-center gap-2 py-3">
+                    <div className="flex items-center gap-2 py-2">
                         <button onClick={onBackToMenu} className="p-2 rounded-full hover:bg-gray-200 transition-colors"><ArrowLeft className="text-gray-700" /></button>
                         <h2 className="text-xl font-bold text-gray-800">Finalizar Pedido</h2>
                     </div>
