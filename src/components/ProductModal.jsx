@@ -21,6 +21,8 @@ const OptionItem = ({ option, quantity, onAdd, onRemove, isDisabled }) => (
 );
 
 export const ProductModal = ({ isOpen, onClose, product, addOns, onAddToCart }) => {
+    if (!isOpen || !product) return null;
+    
     const [mainQuantity, setMainQuantity] = useState(1);
     const [selectedOptions, setSelectedOptions] = useState({});
     const [openGroup, setOpenGroup] = useState(null);
@@ -85,25 +87,15 @@ export const ProductModal = ({ isOpen, onClose, product, addOns, onAddToCart }) 
     const finalMainQuantity = hasAccompaniments ? 1 : mainQuantity;
     const totalPrice = (basePrice + optionsPrice) * finalMainQuantity;
 
-    // CORREÇÃO: Monta o objeto completo aqui
     const handleConfirmAddToCart = () => {
         const finalOptions = Object.values(selectedOptions).map(opt => ({
             ...opt.data,
             quantity: opt.quantity
         }));
-
-        const cartItem = {
-            product,
-            mainQuantity: finalMainQuantity,
-            options: finalOptions,
-            totalPrice
-        };
-        
-        onAddToCart(cartItem); // Envia um único objeto
+        const cartItem = { product, mainQuantity: finalMainQuantity, options: finalOptions, totalPrice };
+        onAddToCart(cartItem);
         onClose();
     };
-
-    if (!isOpen || !product) return null;
 
     return (
         <div onClick={onClose} className="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4 animate-fadeIn">
@@ -125,7 +117,8 @@ export const ProductModal = ({ isOpen, onClose, product, addOns, onAddToCart }) 
                                         <div><h3 className="text-base font-semibold text-gray-800">{group.name}</h3><p className="text-xs font-medium text-gray-500 mt-0.5">{group.min > 0 ? `Obrigatório • ` : 'Opcional • '}Selecione até {group.max}</p></div>
                                         <div className="flex items-center gap-4">{totalQuantity > 0 && <span className="font-bold text-primary">{totalQuantity}</span>}<ChevronDown size={20} className={`transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} /></div>
                                     </button>
-                                    <div className={`transition-all duration-300 ease-in-out overflow-hidden ${isOpen ? 'max-h-screen' : 'max-h-0'}`}>
+                                    {/* CORREÇÃO AQUI: Adicionada a classe max-h-screen para animar a abertura */}
+                                    <div className={`transition-all duration-300 ease-in-out overflow-hidden ${isOpen ? 'max-h-[9999px]' : 'max-h-0'}`}>
                                         <div className="px-4 pb-2 divide-y">
                                             {group.options.map(option => (
                                                 <OptionItem key={option.ID} option={option} quantity={selectedOptions[option.ID]?.quantity || 0} onAdd={() => handleOptionAdd(group, option)} onRemove={() => handleOptionRemove(option)} isDisabled={totalQuantity >= group.max && !selectedOptions[option.ID]} />
