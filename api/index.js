@@ -7,17 +7,25 @@ const parseCurrency = (value) => {
     return isNaN(parseFloat(cleanedValue)) ? 0 : parseFloat(cleanedValue);
 };
 
-// Helper function para converter linhas em objectos
+// --- FUNÇÃO rowsToObjects ATUALIZADA E MAIS ROBUSTA ---
 const rowsToObjects = (rows) => {
     if (!rows || rows.length < 2) return [];
+    
     const header = rows[0];
     const data = rows.slice(1);
-    return data.map(row => {
-        const obj = {};
-        header.forEach((key, index) => { obj[key] = row[index] || ''; });
-        return obj;
-    });
+    
+    return data
+        .map(row => {
+            const obj = {};
+            header.forEach((key, index) => {
+                obj[key] = row[index] || '';
+            });
+            return obj;
+        })
+        // CORREÇÃO FINAL: Garante que apenas objectos com um ID válido sejam retornados.
+        .filter(obj => obj.ID && obj.ID.trim() !== '');
 };
+
 
 // Configuração da autenticação
 const auth = new google.auth.GoogleAuth({
@@ -44,6 +52,7 @@ export default async function handler(req, res) {
             const companies = rowsToObjects(masterSheet.data.values);
             const companyInfo = companies.find(c => c['URL Empresa'] === slug);
             if (!companyInfo || !companyInfo['Link Planilha']) return res.status(404).json({ error: `Empresa '${slug}' não encontrada.` });
+            
             const restaurantSheetId = companyInfo['Link Planilha'];
 
             const ranges = ['Produtos', 'Acompanhamentos', 'Cupons', 'Customizações'];
@@ -52,7 +61,12 @@ export default async function handler(req, res) {
 
             const customizationsObject = (customizationsRows || []).filter((row, index) => index > 0 && row && row[0]).reduce((obj, row) => { obj[row[0]] = row[1] || ''; return obj; }, {});
 
-            const data = { products: rowsToObjects(productsRows), addOns: rowsToObjects(addOnsRows), coupons: rowsToObjects(couponsRows), customizations: customizationsObject };
+            const data = { 
+                products: rowsToObjects(productsRows), 
+                addOns: rowsToObjects(addOnsRows), 
+                coupons: rowsToObjects(couponsRows), 
+                customizations: customizationsObject 
+            };
             return res.status(200).json(data);
         } catch (error) {
             console.error('GET Error:', error);
@@ -65,7 +79,9 @@ export default async function handler(req, res) {
         if (!orderData || !slug) return res.status(400).json({ error: 'Dados do pedido ou slug faltando.' });
         
         try {
-            const masterSheet = await sheets.spreadsheets.values.get({ spreadsheetId: process.env.MASTER_SHEET_ID, range: 'Página1' });
+            const masterSheet = await sheets.spreadsheets.values.get({ 
+                spreadsheetId: process.env.MASTER_SHEET_ID, range: 'Empresas' 
+            });
             const companies = rowsToObjects(masterSheet.data.values);
             const companyInfo = companies.find(c => c['URL Empresa'] === slug);
             if (!companyInfo || !companyInfo['Link Planilha']) return res.status(404).json({ error: `Empresa '${slug}' não encontrada.` });
@@ -106,3 +122,4 @@ export default async function handler(req, res) {
     
     return res.status(405).json({ error: 'Método não permitido.' });
 }
+

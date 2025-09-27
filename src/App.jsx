@@ -18,7 +18,6 @@ const parseCurrency = (value) => {
     return isNaN(parseFloat(cleanedValue)) ? 0 : parseFloat(cleanedValue);
 };
 
-// --- HOOK DO CARRINHO COM LÓGICA DE CUPOM ---
 const useCart = () => {
     const [items, setItems] = useState([]);
     const [coupon, setCoupon] = useState(null);
@@ -36,7 +35,7 @@ function App() {
   const [restaurantData, setRestaurantData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [activeCategory, setActiveCategory] = useState(null);
+  const [activeCategory, setActiveCategory] = useState(null); // Inicia sem categoria selecionada
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
@@ -64,16 +63,71 @@ function App() {
     loadData();
   }, []);
 
-  const categories = useMemo(() => { if (!restaurantData) return []; const allCategories = restaurantData.products.filter(p => p.Situação === 'Ativo').map(p => p.Categoria); return ['Destaques', ...new Set(allCategories)]; }, [restaurantData]);
-  useEffect(() => { if (categories.length > 0 && !activeCategory) setActiveCategory(categories[0]); }, [categories, activeCategory]);
-  const allActiveProducts = useMemo(() => restaurantData ? restaurantData.products.filter(p => p.Situação === 'Ativo') : [], [restaurantData]);
-  const displayedProducts = useMemo(() => { if (searchQuery) { const lowercasedQuery = searchQuery.toLowerCase(); return allActiveProducts.filter(p => p.Nome.toLowerCase().includes(lowercasedQuery) || p.Descrição.toLowerCase().includes(lowercasedQuery)); } if (activeCategory === 'Destaques') return allActiveProducts; if (activeCategory) return allActiveProducts.filter(p => p.Categoria === activeCategory); return []; }, [searchQuery, activeCategory, allActiveProducts]);
+  // LÓGICA ATUALIZADA: Remove a categoria "Destaques"
+  const categories = useMemo(() => {
+    if (!restaurantData) return [];
+    const allCategories = restaurantData.products.filter(p => p.Situação === 'Ativo').map(p => p.Categoria);
+    return [...new Set(allCategories)];
+  }, [restaurantData]);
 
-  const handleCategorySelect = (category) => { setSearchQuery(''); setActiveCategory(category); setIsSearchOpen(false); };
-  const handleSearchSubmit = (term) => { setSearchQuery(term); setActiveCategory(`Resultados para "${term}"`); setIsSearchOpen(false); };
+  const allActiveProducts = useMemo(() => restaurantData ? restaurantData.products.filter(p => p.Situação === 'Ativo') : [], [restaurantData]);
+  
+  // LÓGICA ATUALIZADA: Este memo agora só é usado para busca ou filtro de categoria única
+  const displayedProducts = useMemo(() => {
+    if (searchQuery) {
+      const lowercasedQuery = searchQuery.toLowerCase();
+      return allActiveProducts.filter(p => p.Nome.toLowerCase().includes(lowercasedQuery) || p.Descrição.toLowerCase().includes(lowercasedQuery));
+    }
+    if (activeCategory) {
+      return allActiveProducts.filter(product => product.Categoria === activeCategory);
+    }
+    return []; // Retorna vazio se não houver filtro
+  }, [searchQuery, activeCategory, allActiveProducts]);
+
+  // LÓGICA ATUALIZADA: Clicar na mesma categoria novamente limpa o filtro
+  const handleCategorySelect = (category) => {
+    setSearchQuery('');
+    setActiveCategory(prevActive => prevActive === category ? null : category);
+    setIsSearchOpen(false);
+  };
+
+  const handleSearchSubmit = (term) => { setSearchQuery(term); setActiveCategory(null); setIsSearchOpen(false); };
   
   if (loading) return <div className="w-full h-screen bg-gray-200 animate-pulse"></div>;
   if (error) return <div className="bg-red-500 p-4 text-white text-center"><p><strong>Erro:</strong> {error}</p></div>;
+
+  const renderContent = () => {
+    if (searchQuery) {
+      return (
+        <div className="max-w-7xl mx-auto p-4">
+          <div className="flex items-center gap-3 mb-6"><div className="w-1.5 h-7 bg-primary rounded-full"></div><h2 className="text-2xl font-bold text-gray-800">Resultados para "{searchQuery}"</h2></div>
+          <ProductList products={displayedProducts} onProductSelect={(p) => setSelectedProduct(p)} />
+        </div>
+      );
+    }
+    if (activeCategory) {
+      return (
+        <div className="max-w-7xl mx-auto p-4">
+          <div className="flex items-center gap-3 mb-6"><div className="w-1.5 h-7 bg-primary rounded-full"></div><h2 className="text-2xl font-bold text-gray-800">{activeCategory}</h2></div>
+          <ProductList products={displayedProducts} onProductSelect={(p) => setSelectedProduct(p)} />
+        </div>
+      );
+    }
+    // LÓGICA ATUALIZADA: Renderiza todas as categorias por defeito
+    return (
+      <div className="max-w-7xl mx-auto p-4 space-y-10">
+        {categories.map(category => {
+          const productsForCategory = allActiveProducts.filter(p => p.Categoria === category);
+          return (
+            <div key={category}>
+              <div className="flex items-center gap-3 mb-6"><div className="w-1.5 h-7 bg-primary rounded-full"></div><h2 className="text-2xl font-bold text-gray-800">{category}</h2></div>
+              <ProductList products={productsForCategory} onProductSelect={(p) => setSelectedProduct(p)} />
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
 
   return (
     <>
@@ -83,15 +137,13 @@ function App() {
           {view === 'menu' ? (
             <>
               <CategoryBar categories={categories} activeCategory={activeCategory} onCategorySelect={handleCategorySelect} onSearchClick={() => setIsSearchOpen(true)} />
-              <div className="max-w-7xl mx-auto p-4"><div className="flex items-center gap-3 mb-6"><div className="w-1.5 h-7 bg-primary rounded-full"></div><h2 className="text-2xl font-bold text-gray-800">{activeCategory}</h2></div><ProductList products={displayedProducts} onProductSelect={(p) => setSelectedProduct(p)} /></div>
+              {renderContent()}
             </>
           ) : (
-            // GUARDA REFORÇADA: Só renderiza o checkout se os dados estiverem prontos.
-            !loading && restaurantData && <CheckoutForm cart={cart} onBackToMenu={() => setView('menu')} restaurantData={restaurantData} showToast={showToast} />
+            <CheckoutForm cart={cart} onBackToMenu={() => setView('menu')} restaurantData={restaurantData} showToast={showToast} />
           )}
         </main>
       </div>
-      
       <SearchModal isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} categories={categories} onCategorySelect={handleCategorySelect} onSearchSubmit={handleSearchSubmit} />
       <ProductModal isOpen={!!selectedProduct} onClose={() => setSelectedProduct(null)} product={selectedProduct} addOns={restaurantData?.addOns} onAddToCart={cart.addItem} />
       {view === 'menu' && <CartBar totalItems={cart.totalItems} totalPrice={cart.total} onOpenCart={() => setIsCartOpen(true)} />}

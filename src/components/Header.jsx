@@ -90,7 +90,7 @@ export const Header = ({ customizations }) => {
 
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
 
-            <div className="absolute inset-0 p-4 flex justify-between items-end text-white text-shadow max-w-6xl mx-auto">
+            <div className="absolute inset-0 p-4 flex justify-between items-end text-white text-shadow max-w-7xl mx-auto">
                 <div className="flex items-center space-x-4">
                     <img 
                         src={customizations['URL Logo']} 
