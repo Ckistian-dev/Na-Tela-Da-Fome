@@ -54,48 +54,20 @@ export const CheckoutForm = ({ cart, onBackToMenu, restaurantData, showToast }) 
     const [paymentMethod, setPaymentMethod] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [couponCode, setCouponCode] = useState('');
-    // Adicionado para forçar a atualização da UI após aplicar o cupom
-    const [, forceUpdate] = useState(0);
-
+    
     const deliveryFee = deliveryType === 'delivery' ? parseCurrency(restaurantData?.customizations['Taxa Entrega'] || '0') : 0;
+    // O cart.total já vem com o desconto calculado pelo hook useCart
     const finalTotal = cart.total + deliveryFee;
 
     const handleApplyCoupon = () => {
         if (!couponCode) return;
 
-        // Encontra o cupom na lista de cupons vinda da planilha
-        const coupon = restaurantData.coupons.find(c => c['Código']?.trim().toUpperCase() === couponCode.trim().toUpperCase());
+        // CORREÇÃO: Utiliza a função centralizada do hook 'useCart'
+        // Essa função já gerencia o estado e causa a re-renderização da tela.
+        const success = cart.applyCoupon(couponCode, restaurantData.coupons);
 
-        if (coupon) {
-            // Converte o valor do cupom para número, aceitando vírgula como decimal
-            const discountValue = parseFloat(String(coupon['Valor']).replace(',', '.'));
-
-            if (isNaN(discountValue)) {
-                showToast('O valor do cupom é inválido.');
-                return;
-            }
-
-            let calculatedDiscount = 0;
-            
-            // Lógica: valor < 1 é porcentagem, valor >= 1 é desconto fixo.
-            if (discountValue > 0 && discountValue < 1) {
-                // Desconto em porcentagem
-                calculatedDiscount = cart.subtotal * discountValue;
-            } else if (discountValue >= 1) {
-                // Desconto em valor fixo
-                calculatedDiscount = discountValue;
-            }
-
-            // Garante que o desconto não seja maior que o subtotal
-            calculatedDiscount = Math.min(calculatedDiscount, cart.subtotal);
-
-            // Altera o objeto do carrinho diretamente (conforme estrutura existente)
-            cart.discount = calculatedDiscount;
-            cart.total = cart.subtotal - cart.discount;
-            cart.coupon = coupon; // Guarda o objeto do cupom aplicado
-
+        if (success) {
             showToast('Cupom aplicado com sucesso!');
-            forceUpdate(c => c + 1); // Força a atualização da tela para mostrar o desconto
         } else {
             showToast('Cupom inválido ou expirado.');
         }
