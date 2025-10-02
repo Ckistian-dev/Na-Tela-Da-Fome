@@ -1,13 +1,5 @@
 import { google } from 'googleapis';
 
-const parseCurrency = (value) => {
-    if (typeof value === 'number') return value;
-    if (typeof value !== 'string') return 0;
-    const cleanedValue = value.replace('R$', '').trim().replace(',', '.');
-    return isNaN(parseFloat(cleanedValue)) ? 0 : parseFloat(cleanedValue);
-};
-
-// --- FUNÇÃO rowsToObjects ATUALIZADA E MAIS ROBUSTA ---
 const rowsToObjects = (rows) => {
     if (!rows || rows.length < 2) return [];
     
@@ -22,10 +14,8 @@ const rowsToObjects = (rows) => {
             });
             return obj;
         })
-        // CORREÇÃO FINAL: Garante que apenas objectos com um ID válido sejam retornados.
         .filter(obj => obj.ID && obj.ID.trim() !== '');
 };
-
 
 // Configuração da autenticação
 const auth = new google.auth.GoogleAuth({
@@ -99,18 +89,29 @@ export default async function handler(req, res) {
             
             const paymentMethodMap = { credit: 'Cartão de Crédito', debit: 'Cartão de Débito', pix: 'PIX', cash: 'Dinheiro' };
             const translatedPaymentMethod = paymentMethodMap[orderData.paymentMethod] || orderData.paymentMethod;
-
+            
+            // CORREÇÃO: Removido o campo em branco ('') extra que estava causando o desalinhamento das colunas.
             const newRow = [
-                orderId, formattedDate, orderData.customerName,
+                orderId, 
+                formattedDate, 
+                orderData.customerName,
                 orderData.deliveryType === 'pickup' ? 'Retirada' : 'Entrega',
-                orderData.address || '', orderData.observations || '',
-                translatedPaymentMethod, '', itemsString, orderData.subtotal,
-                orderData.deliveryFee, orderData.coupon || '', orderData.total, 'Novo',
+                orderData.address || '', 
+                orderData.observations || '',
+                translatedPaymentMethod, 
+                itemsString, // Campo correto para os itens do pedido.
+                orderData.subtotal,
+                orderData.deliveryFee, 
+                orderData.coupon || '', 
+                orderData.total, 
+                'Novo',
             ];
 
             await sheets.spreadsheets.values.append({
-                spreadsheetId: restaurantSheetId, range: 'Pedidos!A:N',
-                valueInputOption: 'USER_ENTERED', requestBody: { values: [newRow] },
+                spreadsheetId: restaurantSheetId, 
+                range: 'Pedidos!A:N',
+                valueInputOption: 'USER_ENTERED', 
+                requestBody: { values: [newRow] },
             });
 
             return res.status(200).json({ success: true, message: 'Pedido salvo com sucesso!' });
@@ -122,4 +123,3 @@ export default async function handler(req, res) {
     
     return res.status(405).json({ error: 'Método não permitido.' });
 }
-

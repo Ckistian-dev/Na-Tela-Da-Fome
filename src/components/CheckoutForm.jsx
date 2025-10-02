@@ -54,6 +54,8 @@ export const CheckoutForm = ({ cart, onBackToMenu, restaurantData, showToast }) 
     const [paymentMethod, setPaymentMethod] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [couponCode, setCouponCode] = useState('');
+    // Adicionado para forçar a atualização da UI após aplicar o cupom
+    const [, forceUpdate] = useState(0);
 
     const deliveryFee = deliveryType === 'delivery' ? parseCurrency(restaurantData?.customizations['Taxa Entrega'] || '0') : 0;
     const finalTotal = cart.total + deliveryFee;
@@ -63,6 +65,8 @@ export const CheckoutForm = ({ cart, onBackToMenu, restaurantData, showToast }) 
         const success = cart.applyCoupon(couponCode, restaurantData.coupons);
         if (success) {
             showToast('Cupom aplicado com sucesso!');
+            // Força a re-renderização para exibir o desconto na tela
+            forceUpdate(c => c + 1); 
         } else {
             showToast('Cupom inválido ou expirado.');
         }
@@ -83,7 +87,6 @@ export const CheckoutForm = ({ cart, onBackToMenu, restaurantData, showToast }) 
 
     const paymentMethodMap = { credit: 'Cartão de Crédito', debit: 'Cartão de Débito', pix: 'PIX', cash: 'Dinheiro' };
 
-    // NOTA: Para que os emojis funcionem, este ficheiro DEVE ser guardado com a codificação UTF-8.
     const generateWhatsAppMessage = (orderData, cart, deliveryFee, finalTotal, formatCurrency) => {
         const messageParts = [];
 
@@ -148,8 +151,6 @@ export const CheckoutForm = ({ cart, onBackToMenu, restaurantData, showToast }) 
         return messageParts.join('\n');
     };
 
-
-
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (!paymentMethod) {
@@ -184,7 +185,6 @@ export const CheckoutForm = ({ cart, onBackToMenu, restaurantData, showToast }) 
 
             if (!response.ok) throw new Error('Falha ao salvar o pedido no servidor.');
 
-            // CORREÇÃO AQUI: Passando todos os argumentos necessários para a função.
             const whatsappMessage = generateWhatsAppMessage(orderData, cart, deliveryFee, finalTotal, formatCurrency);
             const whatsappNumber = restaurantData.customizations.Whatsapp;
             const encodedMessage = encodeURIComponent(whatsappMessage);
