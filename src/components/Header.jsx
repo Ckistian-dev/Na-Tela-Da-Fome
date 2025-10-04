@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Instagram, MapPin } from 'lucide-react';
 
-// Função mais flexível e tolerante a formatos variados de dia e hora
+// Função flexível e tolerante a formatos variados de dia e hora
 const checkIsOpen = (daysString, hoursString) => {
     if (!daysString || !hoursString) {
         return { isOpen: false, statusText: "Fechado" };
@@ -25,16 +25,15 @@ const checkIsOpen = (daysString, hoursString) => {
         // --- 1️⃣ NORMALIZA DIAS ---
         let daysNormalized = daysString
             .toLowerCase()
+            .replace(/de/g, '')          // remove “de Segunda a Sexta”
             .replace(/e/g, ',')
-            .replace(/a\s+/g, 'a ')
+            .replace(/\s*a\s+/g, ' a ')
             .replace(/\s+/g, ' ')
             .trim();
 
-        // Suporte a intervalos tipo "Seg a Sex"
-        let workingDays = [];
+        const workingDays = [];
 
-        const dayParts = daysNormalized.split(',');
-        dayParts.forEach(part => {
+        daysNormalized.split(',').forEach(part => {
             const rangeMatch = part.match(/(\w+)\s*a\s*(\w+)/);
             if (rangeMatch) {
                 const start = dayMap[rangeMatch[1]];
@@ -51,31 +50,35 @@ const checkIsOpen = (daysString, hoursString) => {
         const isWorkingDay = workingDays.includes(currentDay);
         if (!isWorkingDay) return { isOpen: false, statusText: "Fechado" };
 
-        // --- 2️⃣ NORMALIZA HORÁRIO ---
-        // Remove textos tipo "das", "às", "as", "h", etc.
+        // --- 2️⃣ NORMALIZA HORÁRIOS ---
         let normalizedHours = hoursString
             .toLowerCase()
-            .replace(/[^\d:\-–a\s]/g, '') // remove letras e símbolos extras
-            .replace(/as|às|a/g, '-')
-            .replace(/\s+/g, '')
-            .replace(/–/g, '-');
+            .replace(/[^0-9:.\-–,]/g, '') // remove tudo que não for número/pontuação
+            .replace(/–/g, '-')
+            .replace(/\.+/g, ':')
+            .replace(/:+/g, ':');
 
-        // Extrai números
-        const match = normalizedHours.match(/(\d{1,2}[:.]?\d{0,2})\s*-\s*(\d{1,2}[:.]?\d{0,2})/);
-        if (!match) throw new Error("Formato de horário inválido");
+        // suporta múltiplos intervalos (ex: “10:00-14:00,18:00-22:00”)
+        const intervals = normalizedHours.split(',').map(str => str.trim()).filter(Boolean);
 
         const parseTime = t => {
-            let [h, m] = t.replace('.', ':').split(':').map(Number);
+            let [h, m] = t.split(':').map(Number);
             if (isNaN(h)) h = 0;
             if (isNaN(m)) m = 0;
             return h * 60 + m;
         };
 
-        const startTimeInMinutes = parseTime(match[1]);
-        const endTimeInMinutes = parseTime(match[2]);
-
-        // --- 3️⃣ VERIFICA SE ESTÁ ABERTO ---
-        const isWithinHours = currentTimeInMinutes >= startTimeInMinutes && currentTimeInMinutes <= endTimeInMinutes;
+        let isWithinHours = false;
+        for (const interval of intervals) {
+            const [start, end] = interval.split('-').map(s => s.trim());
+            if (!start || !end) continue;
+            const startMins = parseTime(start);
+            const endMins = parseTime(end);
+            if (currentTimeInMinutes >= startMins && currentTimeInMinutes <= endMins) {
+                isWithinHours = true;
+                break;
+            }
+        }
 
         return {
             isOpen: isWithinHours,
@@ -88,22 +91,29 @@ const checkIsOpen = (daysString, hoursString) => {
     }
 };
 
-
-
 // Componente para exibir o status (sem mostrar os dias da semana)
+import React, { useMemo } from "react";
+
 const StoreStatus = ({ days, hours }) => {
-    // A lógica continua usando os 'days' para o cálculo
     const status = useMemo(() => checkIsOpen(days, hours), [days, hours]);
 
     return (
         <div className="flex items-center space-x-2 text-xs mt-1">
-            <div className={`w-2 h-2 rounded-full ${status.isOpen ? 'bg-green-400' : 'bg-red-500'}`}></div>
-            <span className="font-semibold">{status.statusText}</span>
-            {/* ALTERAÇÃO AQUI: Removemos a exibição dos dias da semana */}
-            <span className="text-white/80">• {hours}</span>
+            <div
+                className={`w-2 h-2 rounded-full ${
+                    status.isOpen ? 'bg-green-400' : 'bg-red-500'
+                }`}
+            ></div>
+            <span className="font-semibold">
+                {status.statusText}
+            </span>
+            <span className="text-white/80">
+                • {hours || 'Horário indisponível'}
+            </span>
         </div>
     );
 };
+
 
 export const Header = ({ customizations }) => {
     const images = useMemo(() => {
