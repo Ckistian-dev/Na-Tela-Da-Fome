@@ -1,33 +1,82 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Instagram, MapPin } from 'lucide-react';
 
-// Lógica completa que verifica o dia e a hora para determinar o status.
+// Função mais flexível e tolerante a formatos variados de dia e hora
 const checkIsOpen = (daysString, hoursString) => {
     if (!daysString || !hoursString) {
         return { isOpen: false, statusText: "Fechado" };
     }
 
-    const dayMap = { 'Dom': 0, 'Seg': 1, 'Ter': 2, 'Qua': 3, 'Qui': 4, 'Sex': 5, 'Sab': 6 };
+    const dayMap = {
+        'dom': 0, 'domingo': 0,
+        'seg': 1, 'segunda': 1,
+        'ter': 2, 'terça': 2, 'terca': 2,
+        'qua': 3, 'quarta': 3,
+        'qui': 4, 'quinta': 4,
+        'sex': 5, 'sexta': 5,
+        'sab': 6, 'sábado': 6, 'sabado': 6
+    };
+
     const now = new Date();
     const currentDay = now.getDay();
     const currentTimeInMinutes = now.getHours() * 60 + now.getMinutes();
 
     try {
-        const workingDays = daysString.split(',').map(dayAbbr => dayMap[dayAbbr.trim()]);
+        // --- 1️⃣ NORMALIZA DIAS ---
+        let daysNormalized = daysString
+            .toLowerCase()
+            .replace(/e/g, ',')
+            .replace(/a\s+/g, 'a ')
+            .replace(/\s+/g, ' ')
+            .trim();
+
+        // Suporte a intervalos tipo "Seg a Sex"
+        let workingDays = [];
+
+        const dayParts = daysNormalized.split(',');
+        dayParts.forEach(part => {
+            const rangeMatch = part.match(/(\w+)\s*a\s*(\w+)/);
+            if (rangeMatch) {
+                const start = dayMap[rangeMatch[1]];
+                const end = dayMap[rangeMatch[2]];
+                if (start !== undefined && end !== undefined) {
+                    for (let d = start; d <= end; d++) workingDays.push(d);
+                }
+            } else {
+                const day = dayMap[part.trim()];
+                if (day !== undefined) workingDays.push(day);
+            }
+        });
+
         const isWorkingDay = workingDays.includes(currentDay);
+        if (!isWorkingDay) return { isOpen: false, statusText: "Fechado" };
 
-        if (!isWorkingDay) {
-            return { isOpen: false, statusText: "Fechado" };
-        }
+        // --- 2️⃣ NORMALIZA HORÁRIO ---
+        // Remove textos tipo "das", "às", "as", "h", etc.
+        let normalizedHours = hoursString
+            .toLowerCase()
+            .replace(/[^\d:\-–a\s]/g, '') // remove letras e símbolos extras
+            .replace(/as|às|a/g, '-')
+            .replace(/\s+/g, '')
+            .replace(/–/g, '-');
 
-        const [startTimeStr, endTimeStr] = hoursString.replace('Ás', ' ').split(' ').filter(Boolean);
-        const [startH, startM] = startTimeStr.split(':').map(Number);
-        const [endH, endM] = endTimeStr.split(':').map(Number);
-        const startTimeInMinutes = startH * 60 + startM;
-        const endTimeInMinutes = endH * 60 + endM;
+        // Extrai números
+        const match = normalizedHours.match(/(\d{1,2}[:.]?\d{0,2})\s*-\s*(\d{1,2}[:.]?\d{0,2})/);
+        if (!match) throw new Error("Formato de horário inválido");
 
+        const parseTime = t => {
+            let [h, m] = t.replace('.', ':').split(':').map(Number);
+            if (isNaN(h)) h = 0;
+            if (isNaN(m)) m = 0;
+            return h * 60 + m;
+        };
+
+        const startTimeInMinutes = parseTime(match[1]);
+        const endTimeInMinutes = parseTime(match[2]);
+
+        // --- 3️⃣ VERIFICA SE ESTÁ ABERTO ---
         const isWithinHours = currentTimeInMinutes >= startTimeInMinutes && currentTimeInMinutes <= endTimeInMinutes;
-        
+
         return {
             isOpen: isWithinHours,
             statusText: isWithinHours ? "Aberto" : "Fechado"
@@ -38,6 +87,7 @@ const checkIsOpen = (daysString, hoursString) => {
         return { isOpen: false, statusText: "Fechado" };
     }
 };
+
 
 
 // Componente para exibir o status (sem mostrar os dias da semana)
