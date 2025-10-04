@@ -92,8 +92,6 @@ const checkIsOpen = (daysString, hoursString) => {
 };
 
 // Componente para exibir o status (sem mostrar os dias da semana)
-import React, { useMemo } from "react";
-
 const StoreStatus = ({ days, hours }) => {
     const status = useMemo(() => checkIsOpen(days, hours), [days, hours]);
 
