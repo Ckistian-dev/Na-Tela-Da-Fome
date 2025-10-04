@@ -3,7 +3,12 @@ import { Instagram, MapPin } from 'lucide-react';
 
 // Função flexível e tolerante a formatos variados de dia e hora
 const checkIsOpen = (daysString, hoursString) => {
+    console.log("--- INICIANDO VERIFICAÇÃO DE STATUS ---");
+    console.log(`[INPUT] Dias recebidos: "${daysString}"`);
+    console.log(`[INPUT] Horário recebido: "${hoursString}"`);
+
     if (!daysString || !hoursString) {
+        console.warn("[SAÍDA] Fim da execução: Dias ou horários não fornecidos.");
         return { isOpen: false, statusText: "Fechado" };
     }
 
@@ -20,46 +25,59 @@ const checkIsOpen = (daysString, hoursString) => {
     const now = new Date();
     const currentDay = now.getDay();
     const currentTimeInMinutes = now.getHours() * 60 + now.getMinutes();
+    
+    console.log(`[DEBUG] Data/Hora Atual: ${now.toLocaleString('pt-BR')}`);
+    console.log(`[DEBUG] Dia da semana atual (0-6): ${currentDay}`);
+    console.log(`[DEBUG] Hora atual em minutos: ${currentTimeInMinutes}`);
 
     try {
-        // --- 1️⃣ NORMALIZA DIAS ---
-        let daysNormalized = daysString
-            .toLowerCase()
-            .replace(/de/g, '')          // remove “de Segunda a Sexta”
-            .replace(/e/g, ',')
-            .replace(/\s*a\s+/g, ' a ')
-            .replace(/\s+/g, ' ')
-            .trim();
+        // --- 1️⃣ PROCESSAMENTO DE DIAS ---
+        let daysNormalized = daysString.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+e\s+/g, ',').replace(/\s*a\s+/g, ' a ').replace(/\s+/g, ' ').trim();
+        console.log(`[DEBUG] Dias normalizados: "${daysNormalized}"`);
 
         const workingDays = [];
+        const dayParts = daysNormalized.split(',');
+        console.log(`[DEBUG] Partes de dias (após split):`, dayParts);
 
-        daysNormalized.split(',').forEach(part => {
-            const rangeMatch = part.match(/(\w+)\s*a\s*(\w+)/);
+        dayParts.forEach(part => {
+            console.log(`[DEBUG] Processando parte do dia: "${part.trim()}"`);
+            const rangeMatch = part.trim().match(/\b(\w+)\b\s*a\s*\b(\w+)\b/);
             if (rangeMatch) {
-                const start = dayMap[rangeMatch[1]];
-                const end = dayMap[rangeMatch[2]];
+                const start = dayMap[rangeMatch[1].trim()];
+                const end = dayMap[rangeMatch[2].trim()];
+                console.log(`[DEBUG] Intervalo de dias encontrado: de ${start} a ${end}`);
+                // ... (lógica do intervalo já corrigida)
                 if (start !== undefined && end !== undefined) {
-                    for (let d = start; d <= end; d++) workingDays.push(d);
+                    if (start <= end) {
+                        for (let d = start; d <= end; d++) workingDays.push(d);
+                    } else {
+                        for (let d = start; d <= 6; d++) workingDays.push(d);
+                        for (let d = 0; d <= end; d++) workingDays.push(d);
+                    }
                 }
             } else {
                 const day = dayMap[part.trim()];
+                console.log(`[DEBUG] Dia individual encontrado: ${part.trim()} -> ${day}`);
                 if (day !== undefined) workingDays.push(day);
             }
         });
 
+        console.log("[DEBUG] Array de dias de trabalho montado:", workingDays);
+        
         const isWorkingDay = workingDays.includes(currentDay);
-        if (!isWorkingDay) return { isOpen: false, statusText: "Fechado" };
+        console.log(`[DEBUG] Hoje é dia de trabalho? ${isWorkingDay}`);
 
-        // --- 2️⃣ NORMALIZA HORÁRIOS ---
-        let normalizedHours = hoursString
-            .toLowerCase()
-            .replace(/[^0-9:.\-–,]/g, '') // remove tudo que não for número/pontuação
-            .replace(/–/g, '-')
-            .replace(/\.+/g, ':')
-            .replace(/:+/g, ':');
+        if (!isWorkingDay) {
+            console.warn("[SAÍDA] Fim da execução: Hoje não é um dia de trabalho.");
+            return { isOpen: false, statusText: "Fechado" };
+        }
 
-        // suporta múltiplos intervalos (ex: “10:00-14:00,18:00-22:00”)
-        const intervals = normalizedHours.split(',').map(str => str.trim()).filter(Boolean);
+        // --- 2️⃣ PROCESSAMENTO DE HORÁRIOS ---
+        let normalizedHours = hoursString.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/h/g, ':').replace(/as|a|às|ate|ate/g, '-').replace(/[^\d:,\-–]/g, '').replace(/–/g, '-').replace(/\s+/g, '');
+        console.log(`[DEBUG] Horários normalizados: "${normalizedHours}"`);
+
+        const intervals = normalizedHours.split(',').map(i => i.trim()).filter(Boolean);
+        console.log(`[DEBUG] Intervalos de horário encontrados:`, intervals);
 
         const parseTime = t => {
             let [h, m] = t.split(':').map(Number);
@@ -72,21 +90,39 @@ const checkIsOpen = (daysString, hoursString) => {
         for (const interval of intervals) {
             const [start, end] = interval.split('-').map(s => s.trim());
             if (!start || !end) continue;
+
             const startMins = parseTime(start);
             const endMins = parseTime(end);
-            if (currentTimeInMinutes >= startMins && currentTimeInMinutes <= endMins) {
-                isWithinHours = true;
-                break;
+            console.log(`[DEBUG] Verificando intervalo: ${startMins} até ${endMins}`);
+            console.log(`[DEBUG] Comparando com hora atual em minutos: ${currentTimeInMinutes}`);
+
+            if (endMins < startMins) {
+                if (currentTimeInMinutes >= startMins || currentTimeInMinutes <= endMins) {
+                    isWithinHours = true;
+                    break;
+                }
+            } else {
+                if (currentTimeInMinutes >= startMins && currentTimeInMinutes <= endMins) {
+                    isWithinHours = true;
+                    break;
+                }
             }
         }
-
-        return {
+        
+        console.log(`[DEBUG] Está dentro do horário de funcionamento? ${isWithinHours}`);
+        
+        const finalStatus = {
             isOpen: isWithinHours,
             statusText: isWithinHours ? "Aberto" : "Fechado"
         };
+        
+        console.log("[SAÍDA] Status final:", finalStatus);
+        console.log("--- FIM DA VERIFICAÇÃO ---");
+        
+        return finalStatus;
 
     } catch (error) {
-        console.error("Erro ao processar horário de funcionamento:", error);
+        console.error("ERRO CRÍTICO ao processar horário:", error);
         return { isOpen: false, statusText: "Fechado" };
     }
 };
