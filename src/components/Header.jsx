@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Instagram, MapPin } from 'lucide-react';
+import { Instagram, MapPin, Timer } from 'lucide-react';
 
 // Função flexível e tolerante a formatos variados de dia e hora
 const checkIsOpen = (daysString, hoursString) => {
@@ -25,7 +25,7 @@ const checkIsOpen = (daysString, hoursString) => {
     const now = new Date();
     const currentDay = now.getDay();
     const currentTimeInMinutes = now.getHours() * 60 + now.getMinutes();
-    
+
     console.log(`[DEBUG] Data/Hora Atual: ${now.toLocaleString('pt-BR')}`);
     console.log(`[DEBUG] Dia da semana atual (0-6): ${currentDay}`);
     console.log(`[DEBUG] Hora atual em minutos: ${currentTimeInMinutes}`);
@@ -63,7 +63,7 @@ const checkIsOpen = (daysString, hoursString) => {
         });
 
         console.log("[DEBUG] Array de dias de trabalho montado:", workingDays);
-        
+
         const isWorkingDay = workingDays.includes(currentDay);
         console.log(`[DEBUG] Hoje é dia de trabalho? ${isWorkingDay}`);
 
@@ -108,17 +108,17 @@ const checkIsOpen = (daysString, hoursString) => {
                 }
             }
         }
-        
+
         console.log(`[DEBUG] Está dentro do horário de funcionamento? ${isWithinHours}`);
-        
+
         const finalStatus = {
             isOpen: isWithinHours,
             statusText: isWithinHours ? "Aberto" : "Fechado"
         };
-        
+
         console.log("[SAÍDA] Status final:", finalStatus);
         console.log("--- FIM DA VERIFICAÇÃO ---");
-        
+
         return finalStatus;
 
     } catch (error) {
@@ -127,23 +127,35 @@ const checkIsOpen = (daysString, hoursString) => {
     }
 };
 
-// Componente para exibir o status (sem mostrar os dias da semana)
-const StoreStatus = ({ days, hours }) => {
+// ALTERADO: O componente StoreStatus agora aceita a prop 'deliveryTime'
+const StoreStatus = ({ days, hours, deliveryTime }) => {
     const status = useMemo(() => checkIsOpen(days, hours), [days, hours]);
 
     return (
-        <div className="flex items-center space-x-2 text-xs mt-1">
-            <div
-                className={`w-2 h-2 rounded-full ${
-                    status.isOpen ? 'bg-green-400' : 'bg-red-500'
-                }`}
-            ></div>
-            <span className="font-semibold">
-                {status.statusText}
-            </span>
-            <span className="text-white/80">
-                • {hours || 'Horário indisponível'}
-            </span>
+        <div className="flex items-center flex-wrap space-x-2 text-xs mt-1">
+            <div className="flex items-center space-x-2">
+                <div
+                    className={`w-2 h-2 rounded-full ${status.isOpen ? 'bg-green-400' : 'bg-red-500'
+                        }`}
+                ></div>
+                <span className="font-semibold">
+                    {status.statusText}
+                </span>
+                <span className="text-white/80">
+                    • {hours || 'Horário indisponível'}
+                </span>
+            </div>
+
+            {/* NOVO: Lógica para exibir o tempo de entrega, se existir */}
+            {deliveryTime && (
+                <div className="flex items-center space-x-2">
+                    <span className="text-white/80">•</span>
+                    <span className="text-white/80 flex items-center gap-1">
+                        <Timer size={12} />
+                        {deliveryTime}
+                    </span>
+                </div>
+            )}
         </div>
     );
 };
@@ -186,27 +198,29 @@ export const Header = ({ customizations }) => {
 
             <div className="absolute inset-0 p-4 flex justify-between items-end text-white text-shadow max-w-7xl mx-auto">
                 <div className="flex items-center space-x-4">
-                    <img 
-                        src={customizations['URL Logo']} 
-                        alt="Logo" 
+                    <img
+                        src={customizations['URL Logo']}
+                        alt="Logo"
                         className="w-20 h-20 md:w-20 md:h-20 rounded-xl object-cover shadow-lg"
                     />
                     <div>
                         <h1 className="font-bold text-xl md:text-2xl">{customizations['Nome']}</h1>
-                        <StoreStatus 
-                            days={customizations['Dias da Semana']} 
-                            hours={customizations['Horário Funcionamento']} 
+                        {/* ALTERADO: Passando a nova prop 'deliveryTime' para o componente StoreStatus */}
+                        <StoreStatus
+                            days={customizations['Dias da Semana']}
+                            hours={customizations['Horário Funcionamento']}
+                            deliveryTime={customizations['Tempo de entrega']}
                         />
                         <p className="text-xs md:text-sm text-white/90 mt-1 flex items-center space-x-1">
-                            <MapPin size={12}/>
+                            <MapPin size={12} />
                             <span>{customizations['Localização']}</span>
                         </p>
                     </div>
                 </div>
 
-                <a 
-                    href={customizations['Instagram']} 
-                    target="_blank" 
+                <a
+                    href={customizations['Instagram']}
+                    target="_blank"
                     rel="noopener noreferrer"
                     className="hover:scale-110 transition-transform"
                     aria-label="Visite nosso Instagram"

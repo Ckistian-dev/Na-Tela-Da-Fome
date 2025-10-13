@@ -88,7 +88,8 @@ export const CheckoutForm = ({ cart, onBackToMenu, restaurantData, showToast }) 
 
     const paymentMethodMap = { credit: 'Cartão de Crédito', debit: 'Cartão de Débito', pix: 'PIX', cash: 'Dinheiro' };
 
-    const generateWhatsAppMessage = (orderData, cart, deliveryFee, finalTotal, formatCurrency) => {
+    // ALTERADO: Adicionado 'deliveryTime' como parâmetro
+    const generateWhatsAppMessage = (orderData, cart, deliveryFee, finalTotal, formatCurrency, deliveryTime) => {
         const messageParts = [];
 
         messageParts.push(`📱 *PEDIDO NA TELA DA FOME!* 😋`);
@@ -139,6 +140,9 @@ export const CheckoutForm = ({ cart, onBackToMenu, restaurantData, showToast }) 
             messageParts.push(``);
             messageParts.push(`*📍 Endereço de Entrega:*`);
             messageParts.push(`${orderData.address}`);
+            if (deliveryTime) {
+                messageParts.push(`*🕒 Tempo Estimado:* ${deliveryTime}`);
+            }
         } else {
             messageParts.push(``);
             messageParts.push(`*🛍️ Retirada:*`);
@@ -186,7 +190,11 @@ export const CheckoutForm = ({ cart, onBackToMenu, restaurantData, showToast }) 
 
             if (!response.ok) throw new Error('Falha ao salvar o pedido no servidor.');
 
-            const whatsappMessage = generateWhatsAppMessage(orderData, cart, deliveryFee, finalTotal, formatCurrency);
+            // NOVO: Pega o tempo de entrega das customizações
+            const deliveryTime = restaurantData.customizations['Tempo de entrega'];
+
+            // ALTERADO: Passa o 'deliveryTime' para a função
+            const whatsappMessage = generateWhatsAppMessage(orderData, cart, deliveryFee, finalTotal, formatCurrency, deliveryTime);
             const whatsappNumber = restaurantData.customizations.Whatsapp;
             const encodedMessage = encodeURIComponent(whatsappMessage);
             const whatsappUrl = `https://wa.me/55${whatsappNumber}?text=${encodedMessage}`;
