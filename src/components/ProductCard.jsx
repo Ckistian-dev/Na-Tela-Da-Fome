@@ -37,7 +37,8 @@ export const ProductCard = ({ product, onSelect }) => {
           <p className="text-gray-500 text-sm mt-1 mb-2 line-clamp-2">{product.Descrição}</p>
         </div>
         <div className="flex items-end justify-between mt-2">
-          <div>
+          {/* AQUI ESTÁ A MUDANÇA: Usamos 'visibility' para ocultar sem quebrar o layout */}
+          <div style={{ visibility: originalPrice > 0 ? 'visible' : 'hidden' }}>
             {hasDiscount && (
               <span className="text-gray-400 line-through text-xs mr-2">
                 {formatCurrency(originalPrice)}
@@ -47,7 +48,7 @@ export const ProductCard = ({ product, onSelect }) => {
               {formatCurrency(finalPrice)}
             </span>
           </div>
-          {/* AQUI: A função 'onSelect' é chamada no clique */}
+          {/* FIM DA MUDANÇA */}
           <button 
             onClick={onSelect}
             className="bg-primary text-white font-bold text-xs px-4 py-2 rounded-lg hover:bg-primary-hover transform hover:scale-105 transition-all duration-200"
@@ -60,4 +61,3 @@ export const ProductCard = ({ product, onSelect }) => {
     </div>
   );
 };
-
