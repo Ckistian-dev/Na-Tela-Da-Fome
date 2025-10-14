@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { ArrowLeft, User, MapPin, CreditCard, Truck, ShoppingBag, Send, FileText, LoaderCircle, TicketPercent } from 'lucide-react';
+import { ArrowLeft, User, MapPin, CreditCard, Truck, ShoppingBag, Send, FileText, LoaderCircle, TicketPercent, CalendarClock } from 'lucide-react';
+import { DateTimePicker } from './DateTimePicker';
 
 const formatCurrency = (value) => {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
@@ -44,28 +45,26 @@ const OptionButton = ({ icon, label, isSelected, ...props }) => (
 
 // --- Componente Principal do Checkout ---
 
-export const CheckoutForm = ({ cart, onBackToMenu, restaurantData, showToast }) => {
-    // GUARDA DE SEGURANÇA: Se o carrinho ou os dados do restaurante não estiverem prontos, não renderiza.
+export const CheckoutForm = ({ cart, onBackToMenu, restaurantData, showToast, isPreOrderInCart }) => {
     if (!cart || !restaurantData) {
-        return null; // Evita o erro "Cannot read properties of undefined"
+        return null;
     }
     
     const [deliveryType, setDeliveryType] = useState('pickup');
     const [paymentMethod, setPaymentMethod] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [couponCode, setCouponCode] = useState('');
+    const [scheduledDateTime, setScheduledDateTime] = useState(null);
     
     const deliveryFee = deliveryType === 'delivery' ? parseCurrency(restaurantData?.customizations['Taxa Entrega'] || '0') : 0;
-    // O cart.total já vem com o desconto calculado pelo hook useCart
     const finalTotal = cart.total + deliveryFee;
+
+    const preOrderLeadTimeDays = parseInt(restaurantData.customizations['Dias Encomenda'], 10) || 1;
+    const preOrderLeadTimeHours = preOrderLeadTimeDays * 24;
 
     const handleApplyCoupon = () => {
         if (!couponCode) return;
-
-        // CORREÇÃO: Utiliza a função centralizada do hook 'useCart'
-        // Essa função já gerencia o estado e causa a re-renderização da tela.
         const success = cart.applyCoupon(couponCode, restaurantData.coupons);
-
         if (success) {
             showToast('Cupom aplicado com sucesso!');
         } else {
@@ -88,7 +87,6 @@ export const CheckoutForm = ({ cart, onBackToMenu, restaurantData, showToast }) 
 
     const paymentMethodMap = { credit: 'Cartão de Crédito', debit: 'Cartão de Débito', pix: 'PIX', cash: 'Dinheiro' };
 
-    // ALTERADO: Adicionado 'deliveryTime' como parâmetro
     const generateWhatsAppMessage = (orderData, cart, deliveryFee, finalTotal, formatCurrency, deliveryTime) => {
         const messageParts = [];
 
@@ -96,6 +94,12 @@ export const CheckoutForm = ({ cart, onBackToMenu, restaurantData, showToast }) 
         messageParts.push(``);
         messageParts.push(`*👤 Cliente:* ${orderData.customerName}`);
         messageParts.push(``);
+
+        if (orderData.scheduledDateTime) {
+            messageParts.push(`*🗓️ AGENDAMENTO:*`);
+            messageParts.push(`*${orderData.scheduledDateTime}*`);
+            messageParts.push(``);
+        }
 
         messageParts.push(`*🛒 Pedido:*`);
         orderData.cart.forEach(item => {
@@ -140,7 +144,7 @@ export const CheckoutForm = ({ cart, onBackToMenu, restaurantData, showToast }) 
             messageParts.push(``);
             messageParts.push(`*📍 Endereço de Entrega:*`);
             messageParts.push(`${orderData.address}`);
-            if (deliveryTime) {
+            if (deliveryTime && !orderData.scheduledDateTime) { // Só mostra tempo estimado se não for agendado
                 messageParts.push(`*🕒 Tempo Estimado:* ${deliveryTime}`);
             }
         } else {
@@ -158,6 +162,12 @@ export const CheckoutForm = ({ cart, onBackToMenu, restaurantData, showToast }) 
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+
+        if (isPreOrderInCart && !scheduledDateTime) {
+            showToast('Por favor, selecione a data e horário para sua encomenda.');
+            return;
+        }
+
         if (!paymentMethod) {
             showToast('Por favor, selecione uma forma de pagamento.');
             return;
@@ -176,12 +186,12 @@ export const CheckoutForm = ({ cart, onBackToMenu, restaurantData, showToast }) 
             deliveryFee,
             discount: cart.discount,
             coupon: cart.coupon?.['Código'],
-            total: finalTotal
+            total: finalTotal,
+            scheduledDateTime: scheduledDateTime,
         };
 
         try {
             const slug = window.location.pathname.replace('/', '') || 'ruachdelivery';
-            // Aponta para a API centralizada
             const response = await fetch('/api', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -190,10 +200,7 @@ export const CheckoutForm = ({ cart, onBackToMenu, restaurantData, showToast }) 
 
             if (!response.ok) throw new Error('Falha ao salvar o pedido no servidor.');
 
-            // NOVO: Pega o tempo de entrega das customizações
             const deliveryTime = restaurantData.customizations['Tempo de entrega'];
-
-            // ALTERADO: Passa o 'deliveryTime' para a função
             const whatsappMessage = generateWhatsAppMessage(orderData, cart, deliveryFee, finalTotal, formatCurrency, deliveryTime);
             const whatsappNumber = restaurantData.customizations.Whatsapp;
             const encodedMessage = encodeURIComponent(whatsappMessage);
@@ -225,6 +232,22 @@ export const CheckoutForm = ({ cart, onBackToMenu, restaurantData, showToast }) 
 
                     <div className="lg:col-span-2 space-y-4">
                         <div className="bg-white p-4 rounded-lg shadow-sm"><SectionHeader icon={<User />} title="Seus Dados" /><InputField label="Seu nome" name="customerName" placeholder="Digite seu nome completo" required /></div>
+                        
+                        {isPreOrderInCart && (
+                            <div className="bg-white p-4 rounded-lg shadow-sm animate-fadeIn">
+                                <SectionHeader icon={<CalendarClock />} title="Agendar Entrega/Retirada" />
+                                <DateTimePicker 
+                                    operatingDays={restaurantData.customizations['Dias da Semana']}
+                                    operatingHours={restaurantData.customizations['Horário Funcionamento']}
+                                    onChange={setScheduledDateTime}
+                                    minLeadTimeHours={preOrderLeadTimeHours}
+                                />
+                                <p className="text-xs text-gray-500 mt-3">
+                                    Pedidos por encomenda precisam de um tempo mínimo de preparo. As datas e horários disponíveis já consideram este prazo.
+                                </p>
+                            </div>
+                        )}
+
                         <div className="bg-white p-4 rounded-lg shadow-sm"><SectionHeader icon={<Truck />} title="Entrega" /><div className="grid grid-cols-2 gap-3 mb-4"><OptionButton icon={<ShoppingBag size={18} />} label="Retirar" isSelected={deliveryType === 'pickup'} onClick={() => setDeliveryType('pickup')} /><OptionButton icon={<Truck size={18} />} label="Delivery" isSelected={deliveryType === 'delivery'} onClick={() => setDeliveryType('delivery')} /></div>{deliveryType === 'delivery' && (<div className="animate-fadeIn"><InputField label="Endereço de entrega" name="address" placeholder="Rua, Número, Bairro" required /></div>)}</div>
                         <div className="bg-white p-4 rounded-lg shadow-sm"><SectionHeader icon={<TicketPercent />} title="Cupom de Desconto" /><div className="flex gap-2"><InputField label="Código do cupom" value={couponCode} onChange={(e) => setCouponCode(e.target.value)} /><button type="button" onClick={handleApplyCoupon} className="bg-gray-200 text-gray-800 font-semibold px-4 rounded-lg self-end h-[46px] hover:bg-gray-300">Aplicar</button></div></div>
                         <div className="bg-white p-4 rounded-lg shadow-sm"><SectionHeader icon={<CreditCard />} title="Pagamento" /><div className="grid grid-cols-2 gap-3"><OptionButton icon={<CreditCard size={18} />} label="Crédito" isSelected={paymentMethod === 'credit'} onClick={() => setPaymentMethod('credit')} /><OptionButton icon={<CreditCard size={18} />} label="Débito" isSelected={paymentMethod === 'debit'} onClick={() => setPaymentMethod('debit')} /><OptionButton icon={<CreditCard size={18} />} label="PIX" isSelected={paymentMethod === 'pix'} onClick={handlePixClick} /><OptionButton icon={<CreditCard size={18} />} label="Dinheiro" isSelected={paymentMethod === 'cash'} onClick={() => setPaymentMethod('cash')} /></div></div>

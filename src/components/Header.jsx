@@ -3,12 +3,7 @@ import { Instagram, MapPin, Timer } from 'lucide-react';
 
 // Função flexível e tolerante a formatos variados de dia e hora
 const checkIsOpen = (daysString, hoursString) => {
-    console.log("--- INICIANDO VERIFICAÇÃO DE STATUS ---");
-    console.log(`[INPUT] Dias recebidos: "${daysString}"`);
-    console.log(`[INPUT] Horário recebido: "${hoursString}"`);
-
     if (!daysString || !hoursString) {
-        console.warn("[SAÍDA] Fim da execução: Dias ou horários não fornecidos.");
         return { isOpen: false, statusText: "Fechado" };
     }
 
@@ -26,27 +21,16 @@ const checkIsOpen = (daysString, hoursString) => {
     const currentDay = now.getDay();
     const currentTimeInMinutes = now.getHours() * 60 + now.getMinutes();
 
-    console.log(`[DEBUG] Data/Hora Atual: ${now.toLocaleString('pt-BR')}`);
-    console.log(`[DEBUG] Dia da semana atual (0-6): ${currentDay}`);
-    console.log(`[DEBUG] Hora atual em minutos: ${currentTimeInMinutes}`);
-
     try {
-        // --- 1️⃣ PROCESSAMENTO DE DIAS ---
         let daysNormalized = daysString.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+e\s+/g, ',').replace(/\s*a\s+/g, ' a ').replace(/\s+/g, ' ').trim();
-        console.log(`[DEBUG] Dias normalizados: "${daysNormalized}"`);
-
         const workingDays = [];
         const dayParts = daysNormalized.split(',');
-        console.log(`[DEBUG] Partes de dias (após split):`, dayParts);
 
         dayParts.forEach(part => {
-            console.log(`[DEBUG] Processando parte do dia: "${part.trim()}"`);
             const rangeMatch = part.trim().match(/\b(\w+)\b\s*a\s*\b(\w+)\b/);
             if (rangeMatch) {
                 const start = dayMap[rangeMatch[1].trim()];
                 const end = dayMap[rangeMatch[2].trim()];
-                console.log(`[DEBUG] Intervalo de dias encontrado: de ${start} a ${end}`);
-                // ... (lógica do intervalo já corrigida)
                 if (start !== undefined && end !== undefined) {
                     if (start <= end) {
                         for (let d = start; d <= end; d++) workingDays.push(d);
@@ -57,27 +41,17 @@ const checkIsOpen = (daysString, hoursString) => {
                 }
             } else {
                 const day = dayMap[part.trim()];
-                console.log(`[DEBUG] Dia individual encontrado: ${part.trim()} -> ${day}`);
                 if (day !== undefined) workingDays.push(day);
             }
         });
 
-        console.log("[DEBUG] Array de dias de trabalho montado:", workingDays);
-
         const isWorkingDay = workingDays.includes(currentDay);
-        console.log(`[DEBUG] Hoje é dia de trabalho? ${isWorkingDay}`);
-
         if (!isWorkingDay) {
-            console.warn("[SAÍDA] Fim da execução: Hoje não é um dia de trabalho.");
             return { isOpen: false, statusText: "Fechado" };
         }
 
-        // --- 2️⃣ PROCESSAMENTO DE HORÁRIOS ---
         let normalizedHours = hoursString.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/h/g, ':').replace(/as|a|às|ate|ate/g, '-').replace(/[^\d:,\-–]/g, '').replace(/–/g, '-').replace(/\s+/g, '');
-        console.log(`[DEBUG] Horários normalizados: "${normalizedHours}"`);
-
         const intervals = normalizedHours.split(',').map(i => i.trim()).filter(Boolean);
-        console.log(`[DEBUG] Intervalos de horário encontrados:`, intervals);
 
         const parseTime = t => {
             let [h, m] = t.split(':').map(Number);
@@ -93,8 +67,6 @@ const checkIsOpen = (daysString, hoursString) => {
 
             const startMins = parseTime(start);
             const endMins = parseTime(end);
-            console.log(`[DEBUG] Verificando intervalo: ${startMins} até ${endMins}`);
-            console.log(`[DEBUG] Comparando com hora atual em minutos: ${currentTimeInMinutes}`);
 
             if (endMins < startMins) {
                 if (currentTimeInMinutes >= startMins || currentTimeInMinutes <= endMins) {
@@ -108,26 +80,16 @@ const checkIsOpen = (daysString, hoursString) => {
                 }
             }
         }
-
-        console.log(`[DEBUG] Está dentro do horário de funcionamento? ${isWithinHours}`);
-
-        const finalStatus = {
+        return {
             isOpen: isWithinHours,
             statusText: isWithinHours ? "Aberto" : "Fechado"
         };
-
-        console.log("[SAÍDA] Status final:", finalStatus);
-        console.log("--- FIM DA VERIFICAÇÃO ---");
-
-        return finalStatus;
-
     } catch (error) {
         console.error("ERRO CRÍTICO ao processar horário:", error);
         return { isOpen: false, statusText: "Fechado" };
     }
 };
 
-// ALTERADO: O componente StoreStatus agora aceita a prop 'deliveryTime'
 const StoreStatus = ({ days, hours, deliveryTime }) => {
     const status = useMemo(() => checkIsOpen(days, hours), [days, hours]);
 
@@ -146,7 +108,6 @@ const StoreStatus = ({ days, hours, deliveryTime }) => {
                 </span>
             </div>
 
-            {/* NOVO: Lógica para exibir o tempo de entrega, se existir */}
             {deliveryTime && (
                 <div className="flex items-center space-x-2">
                     <span className="text-white/80">•</span>
@@ -181,18 +142,17 @@ export const Header = ({ customizations }) => {
         }
     }, [currentIndex, images.length]);
 
-    if (images.length === 0) {
-        // Renderiza um placeholder caso não hajam imagens, para manter a estrutura
-        return <div className="w-full h-56 md:h-72 bg-gray-200"></div>;
+    if (!customizations) {
+        return <div className="w-full h-56 md:h-72 bg-gray-200 animate-pulse"></div>;
     }
 
     return (
         <header className="relative w-full h-56 md:h-72 overflow-hidden bg-gray-300">
-            {images.map((url, index) => (
+            {images.length > 0 ? images.map((url, index) => (
                 <div key={index} className={`absolute inset-0 transition-opacity duration-1000 ${index === currentIndex ? 'opacity-100' : 'opacity-0'}`}>
                     <img src={url} alt={`Banner ${index + 1}`} className="w-full h-full object-cover" />
                 </div>
-            ))}
+            )) : <div className="w-full h-full bg-gray-300"></div>}
 
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
 
@@ -202,10 +162,10 @@ export const Header = ({ customizations }) => {
                         src={customizations['URL Logo']}
                         alt="Logo"
                         className="w-20 h-20 md:w-20 md:h-20 rounded-xl object-cover shadow-lg"
+                        onError={(e) => { e.target.onerror = null; e.target.src=`https://placehold.co/80x80/e2e8f0/adb5bd?text=Logo` }}
                     />
                     <div>
                         <h1 className="font-bold text-xl md:text-2xl">{customizations['Nome']}</h1>
-                        {/* ALTERADO: Passando a nova prop 'deliveryTime' para o componente StoreStatus */}
                         <StoreStatus
                             days={customizations['Dias da Semana']}
                             hours={customizations['Horário Funcionamento']}
@@ -218,17 +178,18 @@ export const Header = ({ customizations }) => {
                     </div>
                 </div>
 
-                <a
-                    href={customizations['Instagram']}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="hover:scale-110 transition-transform"
-                    aria-label="Visite nosso Instagram"
-                >
-                    <Instagram size={28} />
-                </a>
+                {customizations['Instagram'] && (
+                    <a
+                        href={customizations['Instagram']}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="hover:scale-110 transition-transform"
+                        aria-label="Visite nosso Instagram"
+                    >
+                        <Instagram size={28} />
+                    </a>
+                )}
             </div>
         </header>
     );
 };
-

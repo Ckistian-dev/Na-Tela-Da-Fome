@@ -78,7 +78,15 @@ export default async function handler(req, res) {
             
             const restaurantSheetId = companyInfo['Link Planilha'];
             const now = new Date();
-            const formattedDate = now.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+            const formattedDate = new Intl.DateTimeFormat('pt-BR', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                timeZone: 'America/Sao_Paulo'
+            }).format(now).replace(',', '');
             const orderId = `PED-${now.getTime()}`;
 
             const itemsString = orderData.cart.map(item => {
@@ -90,16 +98,16 @@ export default async function handler(req, res) {
             const paymentMethodMap = { credit: 'Cartão de Crédito', debit: 'Cartão de Débito', pix: 'PIX', cash: 'Dinheiro' };
             const translatedPaymentMethod = paymentMethodMap[orderData.paymentMethod] || orderData.paymentMethod;
             
-            // CORREÇÃO: Removido o campo em branco ('') extra que estava causando o desalinhamento das colunas.
             const newRow = [
                 orderId, 
                 formattedDate, 
+                orderData.scheduledDateTime || '', // Coluna única para data e hora agendada
                 orderData.customerName,
                 orderData.deliveryType === 'pickup' ? 'Retirada' : 'Entrega',
                 orderData.address || '', 
                 orderData.observations || '',
                 translatedPaymentMethod, 
-                itemsString, // Campo correto para os itens do pedido.
+                itemsString,
                 orderData.subtotal,
                 orderData.deliveryFee, 
                 orderData.coupon || '', 
@@ -109,7 +117,7 @@ export default async function handler(req, res) {
 
             await sheets.spreadsheets.values.append({
                 spreadsheetId: restaurantSheetId, 
-                range: 'Pedidos!A:N',
+                range: 'Pedidos!A:O', // Ajustado o range de volta para O
                 valueInputOption: 'USER_ENTERED', 
                 requestBody: { values: [newRow] },
             });
@@ -123,3 +131,4 @@ export default async function handler(req, res) {
     
     return res.status(405).json({ error: 'Método não permitido.' });
 }
+
