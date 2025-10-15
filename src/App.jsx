@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { Helmet, HelmetProvider } from 'react-helmet-async';
 import { fetchRestaurantData } from './services/gSheetParser';
 import { InfoBar } from './components/InfoBar';
 import { Header } from './components/Header';
@@ -102,8 +103,25 @@ function App() {
   if (loading) return <div className="w-full h-screen bg-gray-200 animate-pulse"></div>;
   if (error) return <div className="bg-red-500 p-4 text-white text-center"><p><strong>Erro:</strong> {error}</p></div>;
 
+  const customizations = restaurantData?.customizations;
+  const logoUrl = customizations?.['URL Logo'] || 'https://i.ibb.co/gZJHQ96G/Gemini-Generated-Image-9ttzu89ttzu89ttz.png';
+  const companyName = customizations?.['Nome'] || 'Cardápio Digital';
+
   return (
     <>
+      <Helmet>
+        <title>{`${companyName} | Cardápio Digital`}</title>
+        <meta name="description" content={`Confira o cardápio digital completo de ${companyName}! Faça seu pedido online de forma rápida e segura.`} />
+        <link rel="icon" type="image/png" href={logoUrl} />
+        <link rel="apple-touch-icon" href={logoUrl} />
+        <meta property="og:title" content={`${companyName} | Nosso Cardápio Digital`} />
+        <meta property="og:description" content="Clique no link para ver nossas delícias e fazer seu pedido online de forma fácil e rápida." />
+        <meta property="og:image" content={logoUrl} />
+        <meta property="og:site_name" content={companyName} />
+        <meta name="twitter:title" content={`${companyName} | Nosso Cardápio Digital`} />
+        <meta name="twitter:image" content={logoUrl} />
+      </Helmet>
+
       <div className="flex flex-col min-h-screen">
         <div className="flex-grow">
           <div className="bg-gray-50">

@@ -17,7 +17,7 @@ export const Footer = ({ restaurantName }) => {
                         // ATUALIZAÇÃO: Estilo do link ajustado para o fundo escuro
                         className="font-bold text-white hover:underline"
                     >
-                        Ckistian Programando Soluções
+                        Digital ForMe
                     </a>
                 </p>
                 <p className="text-xs mt-2 text-white/60">

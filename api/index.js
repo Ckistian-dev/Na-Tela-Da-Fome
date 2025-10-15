@@ -2,10 +2,10 @@ import { google } from 'googleapis';
 
 const rowsToObjects = (rows) => {
     if (!rows || rows.length < 2) return [];
-    
+
     const header = rows[0];
     const data = rows.slice(1);
-    
+
     return data
         .map(row => {
             const obj = {};
@@ -30,7 +30,7 @@ const sheets = google.sheets({ version: 'v4', auth });
 
 // A função principal que a Vercel irá executar
 export default async function handler(req, res) {
-    
+
     if (req.method === 'GET') {
         const { slug } = req.query;
         if (!slug) return res.status(400).json({ error: 'Slug da empresa é obrigatório.' });
@@ -42,7 +42,7 @@ export default async function handler(req, res) {
             const companies = rowsToObjects(masterSheet.data.values);
             const companyInfo = companies.find(c => c['URL Empresa'] === slug);
             if (!companyInfo || !companyInfo['Link Planilha']) return res.status(404).json({ error: `Empresa '${slug}' não encontrada.` });
-            
+
             const restaurantSheetId = companyInfo['Link Planilha'];
 
             const ranges = ['Produtos', 'Acompanhamentos', 'Cupons', 'Customizações'];
@@ -51,11 +51,12 @@ export default async function handler(req, res) {
 
             const customizationsObject = (customizationsRows || []).filter((row, index) => index > 0 && row && row[0]).reduce((obj, row) => { obj[row[0]] = row[1] || ''; return obj; }, {});
 
-            const data = { 
-                products: rowsToObjects(productsRows), 
-                addOns: rowsToObjects(addOnsRows), 
-                coupons: rowsToObjects(couponsRows), 
-                customizations: customizationsObject 
+            const data = {
+                companyInfo: companyInfo,
+                products: rowsToObjects(productsRows),
+                addOns: rowsToObjects(addOnsRows),
+                coupons: rowsToObjects(couponsRows),
+                customizations: customizationsObject
             };
             return res.status(200).json(data);
         } catch (error) {
@@ -67,15 +68,15 @@ export default async function handler(req, res) {
     if (req.method === 'POST') {
         const { orderData, slug } = req.body;
         if (!orderData || !slug) return res.status(400).json({ error: 'Dados do pedido ou slug faltando.' });
-        
+
         try {
-            const masterSheet = await sheets.spreadsheets.values.get({ 
-                spreadsheetId: process.env.MASTER_SHEET_ID, range: 'Empresas' 
+            const masterSheet = await sheets.spreadsheets.values.get({
+                spreadsheetId: process.env.MASTER_SHEET_ID, range: 'Empresas'
             });
             const companies = rowsToObjects(masterSheet.data.values);
             const companyInfo = companies.find(c => c['URL Empresa'] === slug);
             if (!companyInfo || !companyInfo['Link Planilha']) return res.status(404).json({ error: `Empresa '${slug}' não encontrada.` });
-            
+
             const restaurantSheetId = companyInfo['Link Planilha'];
             const now = new Date();
             const formattedDate = new Intl.DateTimeFormat('pt-BR', {
@@ -94,31 +95,31 @@ export default async function handler(req, res) {
                 if (item.options.length > 0) itemStr += ` (${item.options.map(o => `${o.quantity}x ${o.Nome}`).join(', ')})`;
                 return itemStr;
             }).join(' | ');
-            
+
             const paymentMethodMap = { credit: 'Cartão de Crédito', debit: 'Cartão de Débito', pix: 'PIX', cash: 'Dinheiro' };
             const translatedPaymentMethod = paymentMethodMap[orderData.paymentMethod] || orderData.paymentMethod;
-            
+
             const newRow = [
-                orderId, 
-                formattedDate, 
+                orderId,
+                formattedDate,
                 orderData.scheduledDateTime || '', // Coluna única para data e hora agendada
                 orderData.customerName,
                 orderData.deliveryType === 'pickup' ? 'Retirada' : 'Entrega',
-                orderData.address || '', 
+                orderData.address || '',
                 orderData.observations || '',
-                translatedPaymentMethod, 
+                translatedPaymentMethod,
                 itemsString,
                 orderData.subtotal,
-                orderData.deliveryFee, 
-                orderData.coupon || '', 
-                orderData.total, 
+                orderData.deliveryFee,
+                orderData.coupon || '',
+                orderData.total,
                 'Novo',
             ];
 
             await sheets.spreadsheets.values.append({
-                spreadsheetId: restaurantSheetId, 
+                spreadsheetId: restaurantSheetId,
                 range: 'Pedidos!A:O', // Ajustado o range de volta para O
-                valueInputOption: 'USER_ENTERED', 
+                valueInputOption: 'USER_ENTERED',
                 requestBody: { values: [newRow] },
             });
 
@@ -128,7 +129,7 @@ export default async function handler(req, res) {
             return res.status(500).json({ error: 'Falha ao salvar o pedido.' });
         }
     }
-    
+
     return res.status(405).json({ error: 'Método não permitido.' });
 }
 
