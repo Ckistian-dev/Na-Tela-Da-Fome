@@ -59,8 +59,7 @@ export const CheckoutForm = ({ cart, onBackToMenu, restaurantData, showToast, is
     const deliveryFee = deliveryType === 'delivery' ? parseCurrency(restaurantData?.customizations['Taxa Entrega'] || '0') : 0;
     const finalTotal = cart.total + deliveryFee;
 
-    const preOrderLeadTimeDays = parseInt(restaurantData.customizations['Dias Encomenda'], 10) || 1;
-    const preOrderLeadTimeHours = preOrderLeadTimeDays * 24;
+    const preOrderLeadTimeHours = parseInt(restaurantData.customizations['Horas Encomenda'], 10) || 1;
 
     const handleApplyCoupon = () => {
         if (!couponCode) return;

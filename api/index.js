@@ -52,7 +52,6 @@ export default async function handler(req, res) {
             const customizationsObject = (customizationsRows || []).filter((row, index) => index > 0 && row && row[0]).reduce((obj, row) => { obj[row[0]] = row[1] || ''; return obj; }, {});
 
             const data = {
-                companyInfo: companyInfo,
                 products: rowsToObjects(productsRows),
                 addOns: rowsToObjects(addOnsRows),
                 coupons: rowsToObjects(couponsRows),
