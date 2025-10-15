@@ -6,7 +6,7 @@
 export const fetchRestaurantData = async (companySlug) => {
   try {
     // A chamada agora é para o nosso endpoint, não mais diretamente para o Google.
-    const response = await fetch(`/api/sheetData?slug=${companySlug}`);
+    const response = await fetch(`/api/index?slug=${companySlug}`);
 
     if (!response.ok) {
       const errorData = await response.json();
